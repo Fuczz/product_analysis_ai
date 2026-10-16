@@ -1,0 +1,20 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -r requirements.txt
+      - name: Chạy pipeline dòng lệnh
+        run: python main.py
+      - name: Kiểm tra app Streamlit khởi động không lỗi
+        run: |
+          python - <<'PY'
+          from streamlit.testing.v1 import AppTest
+          at = AppTest.from_file("app.py", default_timeout=180).run()
+          assert not at.exception, at.exception
+          print("App OK:", [(m.label, m.value) for m in at.metric])
+          PY

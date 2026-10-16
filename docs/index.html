@@ -1,0 +1,1000 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Product Analytics + AI · Segmentation, Journey, Cảnh báo</title>
+<meta name="description" content="Demo Python: phân nhóm người dùng, phân tích hành trình và cảnh báo engagement giảm bất thường.">
+<style>
+:root{--ink:#12303B;--teal:#0E7C86;--amber:#F2A541;--red:#C8553D;--mist:#E6F2F3;--line:#D5E3E6}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;font:16px/1.65 "Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:#fff}
+a{color:var(--teal)}
+header.hero{background:var(--ink);color:#fff;padding:72px 24px 56px}
+.wrap{max-width:1120px;margin:0 auto}
+.hero h1{font-size:clamp(28px,5vw,46px);line-height:1.15;margin:0 0 14px}
+.hero p{max-width:760px;color:#C9DDE1;font-size:18px;margin:0 0 28px}
+.btns{display:flex;gap:12px;flex-wrap:wrap}
+.btn{display:inline-block;padding:11px 20px;border-radius:8px;text-decoration:none;font-weight:600;border:1.5px solid #fff;color:#fff}
+.btn.primary{background:var(--amber);border-color:var(--amber);color:var(--ink)}
+nav{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);z-index:5}
+nav{padding:0 24px}nav .wrap{display:flex;gap:6px;overflow-x:auto;padding:10px 0}nav a:first-child{margin-left:-14px}
+nav a{white-space:nowrap;padding:6px 14px;border-radius:999px;text-decoration:none;color:var(--ink);font-size:15px}
+nav a:hover{background:var(--mist)}
+section{padding:56px 24px}section:nth-of-type(even){background:#F7FBFB}
+h2{font-size:30px;margin:0 0 8px}h3{font-size:20px;margin:28px 0 8px}
+.lead{color:#4B6A73;margin:0 0 28px;max-width:760px}
+.grid{display:grid;gap:18px}.g3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px 22px}
+.card h4{margin:0 0 6px;font-size:18px}.card p{margin:0;color:#3F5D66}
+.kpi{text-align:left}.kpi b{display:block;font-size:34px;color:var(--teal);line-height:1.1}
+.kpi span{color:#4B6A73;font-size:14px}
+figure{margin:0 0 22px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px;overflow:hidden}
+figure img{max-width:100%;height:auto;display:block;margin:0 auto}
+figcaption{font-size:14px;color:#4B6A73;padding:8px 10px 2px}
+.two{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(420px,1fr))}
+.two>*,.grid>*{min-width:0}
+@media(max-width:560px){.two{grid-template-columns:1fr}}
+.tw{overflow-x:auto}
+table.t{border-collapse:collapse;width:100%;font-size:14px;background:#fff}
+table.t th{background:var(--ink);color:#fff;text-align:left;padding:8px 10px;font-weight:600}
+table.t td{padding:7px 10px;border-bottom:1px solid var(--line)}
+table.t tr:nth-child(even) td{background:#F7FBFB}
+pre{background:#10222B;color:#E6F2F3;padding:16px 18px;border-radius:10px;overflow:auto;font:13px/1.55 Consolas,"Courier New",monospace;margin:0}
+details{background:#fff;border:1px solid var(--line);border-radius:10px;margin:10px 0}
+summary{cursor:pointer;padding:12px 16px;font-weight:600}
+details pre{border-radius:0 0 10px 10px}
+.sev-CRITICAL{color:var(--red);font-weight:700}.sev-WARNING{color:#B7791F;font-weight:700}
+.note{background:#FFF6E5;border:1px solid #F2D9A6;border-radius:10px;padding:14px 18px}
+footer{background:var(--ink);color:#C9DDE1;padding:28px 24px;font-size:14px}
+code.i{background:var(--mist);padding:2px 6px;border-radius:5px;font-size:.92em}
+</style>
+<script src="assets/plotly.min.js"></script></head><body>
+<header class="hero"><div class="wrap">
+<h1>Product Analytics có AI tóm tắt hành vi người dùng</h1>
+<p>Ba kỹ thuật cốt lõi — <b>Segmentation</b>, <b>Journey analysis</b> và <b>cảnh báo engagement giảm bất thường</b> —
+cài đặt bằng Python, chạy trên dữ liệu giả lập và hiển thị bằng biểu đồ tương tác. Mọi số liệu trên trang này
+được sinh ra từ chính mã nguồn trong repo.</p>
+<div class="btns"><a class="btn" href="#ket-qua">Xem kết quả</a></div></div></header>
+<nav><div class="wrap"><a href="#van-de">Vấn đề</a><a href="#thiet-ke">Thiết kế</a><a href="#ket-qua">Kết quả</a>
+<a href="#canh-bao">Cảnh báo</a><a href="#ai">AI tóm tắt</a><a href="#ma-nguon">Mã nguồn</a><a href="#chay-thu">Chạy thử</a><a href="#han-che">Hạn chế</a></div></nav>
+
+<section id="van-de"><div class="wrap">
+<h2>Vấn đề và mục tiêu</h2>
+<p class="lead">Chỉ nhìn tổng DAU hay doanh thu thì không biết ai đang dùng thế nào, họ rơi ở đâu và khi nào có sự cố. Ba kỹ thuật này trả lời ba câu hỏi đó.</p>
+<div class="grid g3">
+<div class="card"><h4>👥 Segmentation — “Ai là ai?”</h4><p>Chia user thành nhóm có hành vi giống nhau (RFM + hành vi, K-Means) để cá nhân hoá thay vì một chiến dịch cho tất cả.</p></div>
+<div class="card"><h4>🧭 Journey — “Đi đường nào, rơi ở đâu?”</h4><p>Session hoá event, tìm đường đi phổ biến, funnel và ma trận chuyển bước để thấy điểm nghẽn.</p></div>
+<div class="card"><h4>🚨 Cảnh báo — “Có gì bất thường?”</h4><p>So hôm nay với baseline cùng thứ, dùng median + MAD (robust z-score) để phát hiện sớm và chỉ ra giảm ở đâu.</p></div>
+</div></div></section>
+
+<section id="thiet-ke"><div class="wrap">
+<h2>Thiết kế hệ thống</h2>
+<p class="lead">Event đi qua validation vào event store, ba module phân tích chạy song song, kết quả được gom thành JSON cho AI diễn giải và đổ ra dashboard.</p>
+<figure><img src="assets/architecture.png" alt="Kiến trúc tổng thể"><figcaption>Kiến trúc tổng thể</figcaption></figure>
+<div class="two"><figure><img src="assets/flow.png" alt="Luồng hoạt động (activity diagram)"><figcaption>Luồng hoạt động (activity diagram)</figcaption></figure><figure><img src="assets/erd.png" alt="Mô hình dữ liệu (ERD)"><figcaption>Mô hình dữ liệu (ERD)</figcaption></figure></div>
+</div></section>
+
+<section id="ket-qua"><div class="wrap">
+<h2>Kết quả chạy thật</h2>
+<p class="lead">Dữ liệu giả lập 1,493 user trong 60 ngày, có chèn sẵn một sự cố làm nền tảng Android giảm hoạt động ở cuối kỳ. Di chuột lên biểu đồ để xem chi tiết.</p>
+<div class="grid g4" style="margin-bottom:26px">
+<div class="card kpi"><b>220,521</b><span>event hợp lệ (đã loại 3 event sai schema)</span></div>
+<div class="card kpi"><b>44,058</b><span>session</span></div>
+<div class="card kpi"><b>70.4%</b><span>mất ở bước → add_to_cart (điểm nghẽn lớn nhất)</span></div>
+<div class="card kpi"><b>6</b><span>cảnh báo phát ra</span></div></div>
+
+<h3>1 · Segmentation</h3>
+<div class="two"><figure><div style="height:460px; width:100%;">                            <div id="11009ce4-e5e1-4fd2-a6e0-2d80aa00d1bd" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("11009ce4-e5e1-4fd2-a6e0-2d80aa00d1bd")) {                    Plotly.newPlot(                        "11009ce4-e5e1-4fd2-a6e0-2d80aa00d1bd",                        [{"marker":{"color":"#0E7C86","opacity":0.65,"size":6},"mode":"markers","name":"Kh\u00e1ch trung th\u00e0nh mua nhi\u1ec1u (power buyer)","x":{"dtype":"f8","bdata":"voXUjBOGBkAEnBEb3OEBQKuW25cHzgdAsCk0zucFC0BTP4fKjSAFQMO33mFulARAbXHy+u3+CEBx6TL2BOMDQOVkfNQFWQdACVmBF\u002fyKC0AEx+MVm6AFQJc8AQlYk\u002fo\u002f710sKHKLCUA0+AAAqP8KQC3xn\u002fvlGgNAjq+RwdHvCUAmCM3IVMcJQAu1lBNh4ApAgrxbm8MOCUBOs3MWQaILQN4dv8izYwRAnZbNK1rFBUDCrE\u002fAEnsDQIVYc1ejswFALVEd63V+CUCfw2SUx2sHQAos04JiPQNAAxKcDpxdB0DPTUJjHCoGQB\u002fIKBOuqgNACe8JC8WBCUCIZsghsqMJQG7lH5ixIghA9vNljgHqBEBNRSXbB9IEQNRALZ1a\u002fgpA3AizsZwgBEDSL3syHgkJQJDz868IgghAz1WRNVa7BUCTAJaO97kHQNHUKppRB\u002fo\u002fduXKkY8uBECsCD\u002fyMbkDQPYO4hOzwwNA7kQHeyrsBkAQnBtTPDoIQP2U1FijJwRAY4eSaOQDCEAohOBoiMIBQPiLyDMvTAhAuOjmXa+fBUCEnugJXtoDQAlGM9jZqAlAYVjjmR2cBkApHP+Qfn4FQDVAt19JzAZAjN1FchEmCECuAFqFepMIQEjGeD6LqQlANaI\u002fL3vDCEBx\u002f\u002fqPW3YJQLPqlm62gAZAChLBeCneCkBbtAxgzZMKQIFFt2tA5gRAf9bfwtUKB0CqPOYwUosJQOpbTymquAlAwVJ8dnFKCkCiPxRqhY4EQKNb7YWoUQhAc5FjlyZvBkBGzgQAj1EKQMMlCgo7kQdA3FWePT9XBkCiJrbBHtgKQGCI3oi9vQtAyglsT9nuCEDztjarSpUIQLrjO\u002fpD7gdA0gFjsfMvC0B+VhEPIHILQC60Nm3yOQJA8XbzBcBpBEBKdLZD+dkKQGnnHirTZglA\u002fjtKjOWBBECHJePB3twDQK7QsnwkEAZAElPsDk1iC0B8v2gzmdkHQIwAs7G4oAlAi5k7k7F1B0CcIQEw8FsFQF8mY2FLJQhAKMeA\u002fmy7BkBGsIkBpmMHQGfSr6fUhwZAyxrlhm5\u002fCEDODDQ5u9ALQK6XsA17GQdA7sfs6Ok0CkB\u002fLwAryIgIQGgwROGBHwNANzcQKAbwCkCnIt7eoswBQJPHSIRzlgBAXBv5hOmPCkAkeQezzvUAQCS3noia2ghAoRgM0\u002ffpAUDjBy0CyGcEQBBObB35kgpANktbrEjSB0BwFEaH3ZYLQKHprM322AZALOMtt8pACEB\u002fvWmhhbwHQDkvq1qF5wVAXjsNSb1zB0DewIjSLwMEQJ5gHkmI\u002fwVA5984YRd5CkD3OXwIlR4HQM\u002fotDg+gwNAKuLwKgTiCkAFCvU5J1MJQC9n+WA6wAJA8PsJrnEOA0CVws167bUEQKCyskXjwAlAy8GaBnR+CED02m8DCdsHQLsvmZr1VAJAog\u002fsvkRfB0A6mmwm\u002fv4CQGmGPwhBtAlAZm5TpIIPCEDyoRKsvCgGQHa+osjBAwtAKuIOfAqCCkDBUC1UPYwDQNcrfeGCBgJArgfFkGEQB0A25NkioK0FQL43zrP05QNACLwk\u002fzJIBkD+m4hqTC8LQFbiica5IQZAyZ4pHAVPCkAIQvE8ugAKQItgSKcqPQRASjKUbsM9CUDiWaV6vJMGQD5Ux9LS+ANACua4jqbQB0C7vyYZCsYFQFa6ljKm9wpAg43US8GUAUDLv+nyU8cHQNUl8WgMCwdAgrt2cNcBBEDLls+NZ7wJQOZnme\u002fL\u002fgdA54cV7YIZCkACDj\u002fvk1oKQHLIButodAZAVSK+fFU1DECn95SdS4YIQA0suj7VowpAG2fKX+odB0BhoEFUWUcHQNevg6nV9ANAsTCinoh+A0CwrwGI1FYHQKXqL\u002f7FsQVAwdU9O07OBkCwL8SZfgoJQA=="},"y":{"dtype":"f8","bdata":"smdCdM6l8T\u002fiJA2vwDv8P+fmQu74z\u002fo\u002feGt5y30W\u002fT\u002fifJiAmM3vP4VSiA18a\u002fs\u002flBi9P5JA9j84MDlDbIf0P6Klu2WVMPo\u002fzIVaImKN9D8j\u002fW1gvqDxP0sWcvFnIPQ\u002feH55+16h8j+o+S6hVNT9P\u002f65RBR\u002fJ+0\u002fbUqOwE1z+z\u002fGox44vu\u002fiP59ygIhEafQ\u002fgpIp9fEt\u002fT\u002f6Z1hKRnn6PzNzZYZOcfM\u002fSDmZnJ+V6D81+pleQgr\u002fP6BEzG16jvY\u002fRuEGNvuP6T8ovLf2Xyj0P7B9\u002fFt\u002fM\u002fA\u002fNActYiF9+D+sVP\u002foWfsEQK1dVNjsMes\u002fjywRWRNz7j+LMTAVeZTqP6wplCOlW\u002fY\u002f2+2AN36s8z9QzCmteRoCQPBFAw9rgvI\u002f4bFTUkGp+z+pDMSdB0f5PwZi35hnV\u002fk\u002fcpAZX3XV9z9EmhWNpVPzPy4+WY66E\u002fU\u002fLyhXfPL66T\u002fPf65FdivxP5Z5YJWUYv0\u002fRac65wjv5z8i3fM+wkD5P12ew4bsm\u002fU\u002f6KQlNk5P5j8gpS9k4h7qP45I+ZohXfc\u002f3oBgqB0KAUC2n65BQFbvPz2ZmoCs7v0\u002f2hCvBqdG9z+LAj8x1iLxP4u5fTbX+fo\u002foeINMjE85z\u002f0X1B+ReXvP4DA7s44CfY\u002fwfS673Q09T\u002fRkMiEsB32Px8NA7ERh+s\u002f++sOYeQd9T\u002fw8WUyL1XlPzFk5fJ13u0\u002fc\u002fXS\u002fJ1F8z8SfDctiNHtP90GMROvCPQ\u002fzuGxlvI28z8K7T0cnQL5P1ln5seoHfM\u002frG8UEOt88D\u002fB\u002fA+NQaEAQLm0QIvnjeo\u002fmCxto9jn+T+BLEZjK4bzPy0DofXFAfc\u002fmYdy+mBo9D92nt44Lbj9P\u002f7bZgJvC\u002fk\u002fdg3l2gAj\u002fj9lOy\u002ftI4DvPzrKJB\u002foeeg\u002fSpZNa2Rj9j9o+Ar8\u002f9DzP6Cdk6cE\u002f\u002fc\u002f24EDiFZw7j+HA05sw4roP96Ac3KO8vY\u002fDUc4ktcS\u002fj\u002fI++Z7OO\u002fiPwsK+DR5pPI\u002fVQ2eUiJr8T+kKI8F4rDoPzr+jZNW\u002fuc\u002fe5wNqhzT9D\u002fBM1F8CFrpP4jb2VYhE\u002fE\u002fYVPEdyWy6T9\u002fsVpX+7HxP0XLxG2HwPc\u002fVx0AkUIl9j939dYwX5T2P9CHqRg8Muo\u002fMmBY3k4Z8T\u002fcErwILQzyP5jXIIy6UPw\u002fnegfwVEH9T8X4LM9WcvyP9FRxyv8afc\u002f2gMUxofw7j8jAn0IskjMP6d1fqp7ofI\u002fZSta2261\u002fD9lGAMXFCz8P8uYDrx\u002fefg\u002fMAf3O2wK9z9s6SJHWurxP5ay3RdxMd4\u002f0i3c+PS08j\u002fcrs2jb+HfPyWsMpkb0gBA0G6NN3Er+T8y\u002fSFhDv\u002fxP2J8yDi+B\u002fM\u002f3+gBAqgJ+T\u002fjLJl69mP1P36i4Zgd3+4\u002fLg7PPpwkyj\u002fSiQNTpq3qPxo8nZKdjfY\u002fn7jcuP\u002fL9z9yFvwFf1\u002fsP5KrIEoimec\u002fMtnkC8rwAkB6DOmqSeHkPx3G6qynyvk\u002fjNwgGBqJ+z8PHbnfbIn\u002fP7ZECMLf7PM\u002fe1gB7NCA+j8S4EvHzTTyPwC0cw3RpOI\u002fvVqCf+UM8T9m2rluBa35P6\u002fkDpJCo+8\u002fSF\u002f9RTyE4j8Sftq\u002fzjf3P8IwmOjRYvQ\u002fa3PgBjdu+T\u002fJiAaUpEX6PwpXxqNsfOk\u002fmyxfNwgV8j9pfvNbrIXzP7VE8emvG\u002fI\u002ff9fY+6RT9z9+10Thd6\u002f2P7dPUgqqmwBAsv6Hyn8V4j\u002fRS2fdjD3zP68DJCnZVfs\u002fXal\u002fQBjw5z+Lr489L8XxP33t8T55ufU\u002fzcwPc+g79z9sGEZQSSXxP2u+a9fAiuo\u002fzPOSFLXX9T9zeWbkHkHyP4Rp+zIGL\u002fI\u002fnQ5rc+Z29T\u002fGgk67qbHuPwpI5hJVlvc\u002fxnIZ9QB59T8dZi9rflXrP57DJ9\u002fRpPs\u002fSgz7Nv+J+D+NGJZKvLPjPw=="},"type":"scatter"},{"marker":{"color":"#F2A541","opacity":0.65,"size":6},"mode":"markers","name":"Ng\u01b0\u1eddi d\u00f9ng th\u1ec9nh tho\u1ea3ng (casual)","x":{"dtype":"f8","bdata":"WFmnBqrY4T+6a+PUIQraP3vPbf57Rfk\u002fNrpNCUJu+D+u2KDOgeSFPywDahJNd\u002fo\u002fZ4XO9z0T9j+SEAPMY6bfv+cI48lmAds\u002fx5wbAQss3z+lrcvIO7nsP+v0fa0CaPk\u002fQyQouts68j9x5q7ea\u002fXgP5Lz68kujPE\u002fw9t52RPA5b9WBJvOzGT3P8AFKEzHe\u002fA\u002fHNA3iF4K7j\u002fjTRauzXvbPxxk2kHgJ\u002fg\u002fyaGvxfD9+z+Xo\u002f3aWK\u002fcP6Hy0y\u002fOA+Q\u002fPS6+9Fg46j\u002fcYCA2h6bvP4bFcjpXkvM\u002f6VdfEj3B3D8\u002fY83Zt\u002f\u002favylAIguTZPE\u002fwpXFoUxnwz9CQBILxVLyP7EQUXHzwPc\u002fq3N4jIcm+j9+7r+QgtuCP6qIrJcir\u002fs\u002fownUhJy94j+3Q+yOUVndvzCqm3BtQ\u002fk\u002fRP4F8bei8T8yKoqeLHj3P7LCnYmXkvM\u002flbbDGt+H1j9upvSsrJPjP0OfMd1c7\u002fA\u002fgzdgSpjq4j+4wpJZQ671P0lauA3nMfc\u002f5p8oSdjA4T82DyTrp0rUv4o76nfzMuU\u002f9pgy2erO8z9sdu+yaE\u002fhP2OuRMpZoe8\u002f6v6ZyWY5xb\u002fe38OvN63tP2Arg2FW9fE\u002fbZD9IlE07D8LKpPDVczvP5c+E+lCZPc\u002f+weUA7Uc6D8yPadp3JD2PzK4uQNP58c\u002f3806K+dp1T86UNJoNoHwP3afXlj+dcS\u002fuH\u002fqnJHv+j+FE589jgDzPyrWmXK4Xfs\u002fBFkNT+8C8j88QYibhJrjP0n80Vrr4Ow\u002f+qqueO+J+j9vglmNJbfcPwMHQYnsW+w\u002fVPnrTIln4T+3Pu9xeCrhP4czMjMGJ+e\u002fbzRZOZB04z+tD+INwPvsP3NkAdwxQ9+\u002fSXo7iMLj9D\u002frwQYFhxrFvxHAsk\u002fS8fE\u002fkeO9FTxn8D\u002fqalNgL474P7HS7I4IK+k\u002fssRUyIa55z9VahrZmTnmPyuWgHz7Z+0\u002fuyr7v9eO9z\u002fENHXj+z7QPx4BiAHsdOE\u002fSMYjRt9\u002f4z\u002faAU5ZFo7zP3J2ezqxJNs\u002fZ9o2uIL48T9PAHOCuF3wP02PnTUOh+o\u002f1qJybXxVtz+qJxGWDxT1P8dMGepwIvA\u002fTE61QYgV+T8mj5WDCpL3P\u002f6YAbglvPY\u002fWUXjMQ2K6z86D1cau3fiPxIJV3PgrOg\u002fkPgjGKMj6D+Cc8X7u2invxunXuer7O0\u002fRwo\u002ff7357D95N+9DpGnhPyxPUe5nOfU\u002f3wDo+S7v57+jK+u+MCr8P7hlO5w44us\u002fNn7RFRXl9j\u002fbwNtT\u002fDjxPyTtTtSre8M\u002fKZFTUiCJ8T9Qm6\u002fO3LnpP8RyJcf8c+Y\u002fIIKey35v8T8XYSw7xrrtP01FlaVsJ\u002fA\u002fYGJM4WMLzz\u002fx8lG9Tc7hP21EepnxQNg\u002fRwhA78QT7z8G6iKWK\u002f\u002fyP8E44Iy4JO0\u002ffactfKD69D+bu3Rk\u002fRXXP2iL96uqteo\u002fASt\u002f71X5zz+Bxnw1CMjVP6aZwsf8Tuk\u002fvykP5f0V4D\u002fRIWlej1Ldv8MOn5qpVOi\u002f8pa6sqPy8D8T7RdSre7tP5JrbKvP\u002ffY\u002fYLf8V2\u002fS9j8lYtkbkd\u002f0P9HpT7b6n+Y\u002flX\u002f\u002fPCc57D9RHBDOA0vpP8pv1zaeWvQ\u002f9altMC0v9T93bjN40a32Py7K6VO+Uus\u002fdXq4o3Co6j9uZWfpSj7dvx2sb2\u002f2xuw\u002fIRSnYeBh6D8rqQZAd0rXPy+6yK48POY\u002fxXaNG7zp0z+Br2hQ8t\u002fyP0Zz\u002fxDNU\u002fI\u002fb5ouqRUV0z\u002fytG5xUZLuP5FJmK7LtfA\u002f\u002f3emkvpq7D9kEKMFYfD3Pyk9rx5+Ktg\u002fZ8QArkp6wL\u002f1Bz6TKeT3P3nAbfFWhNK\u002fLZJrQ7\u002fw678OJB42nRTjvwdkkLnw+eS\u002fZhqwsUjo9T\u002f3RbnfLCDvP8i4obXPffA\u002fbyVJqBLRtz+5MNSqrMHwP0ef07dijew\u002fMJIRDoZj7z8XrsPWlS3rP7VYLDwFgu4\u002f0JQ6imai8j+ApmtF8kjyP++mZKSt0fU\u002fX29jz2CO7D\u002fsmEA5sADuPzxo\u002fpkHpfQ\u002fdBRCiXbFwj8GL5xXHVbfPwFq28nGmbY\u002fCw7GxWCv4L859qKH3\u002fP5P8hoY1yBXPY\u002f1kBbOLy94j82l0nmMAz0PwCEv+xkxu0\u002fjV8Zv0cE7D\u002fHOsBEcojCP9cAW7aH++I\u002fz0Zsr6We6z+0KFzM9ADqPw5wip5Efuw\u002fUs2tp\u002f6K17+X1sX3FmTuP8My6SQcjOg\u002fBqTjUTmLkz+yttLkAfbbPzcSSw6pn\u002fE\u002fdxqajgru7D\u002f3LZsBt8TfPz6QSh+Cw+4\u002fUtxpCh9j5z8eoMc70J7mPz8kXBIRHfA\u002f1UfB9qjw8T8qZkrk+FHzP4vmmvQKfs0\u002fRdG+k6NJvj\u002fthAx0R2XtP7KwK51Vefc\u002f+klC4Nyd+T+Q5xmnNinsP7bwbb+XYvc\u002fSKjIV90o7D\u002fA7PFW2UjpP\u002f41mklgVfE\u002fnJrOcvUZ4j+cYWfJq4zIv\u002fEa6YP28+8\u002fGCRRy1HC4b8Fyrzlr2TnP2tL64uFSOO\u002fPepgOLY6\u002fD\u002fiBz7SJ0rXvwKeZd6infE\u002fmOSuOfPYAEC0CAB2Z6PuP0l4SDUJvNA\u002f11kPNoD29j8FMaovQDjxP2om0KijysA\u002fbSFqQjv76L\u002fBkshYn0XsP+vcUY59kPc\u002fDs\u002fhysi50z+mQvByBLnuP1WEoPmcnsa\u002f83sM8dxJ0D8Nrg7XQw7Dv44KO\u002f2QQO0\u002fRx7DzdLh\u002fT93OzzFcab2P3efBgBoQvM\u002fe+IAmtrk0z9pSUJZkeG\u002fP52\u002fgaw3ZOA\u002f2fMdzWJH279nwpB7gFHuP6KpiE6DSvQ\u002fmejmDVO1\u002fj\u002f1FJM2c\u002fHZP0AybByMevk\u002fkdX8zZ8P8T\u002f2o66QaWrkP29g4C2uxO0\u002f+VHdlIvU8D8842Eg02b0P7Bl44hkGuk\u002fu+kZDx2p9j9K\u002fJ43XKrjP34+ddq3eOA\u002fUDw7NX\u002fn8z\u002fPQjVJ6Uv3P\u002fXotqRDKPc\u002fTNnhl5Tx+j\u002fr\u002ffFYw6DyP\u002fWaNXY9gu4\u002fvpU1Y+rQ7T9jq69+lvLvP3MjkfRo67a\u002f1+QuhOny0T83BOvd7o\u002fxP6yCa47HMuE\u002fa4gYx2AI7D\u002fPmScbgerqP+Vkt0r0i\u002fo\u002fsY7dMiAI+T\u002fUO4KVqa32PwTQgT4MG\u002fA\u002fk+Xa7cJn6T\u002f19W\u002fxrmrLv4Iww4E0TM0\u002fz\u002fub5jwMt79RGiVE2\u002f\u002f6Pw287T4bC\u002fA\u002fMCaIziVF4z\u002f\u002fyfLG3ljxP5XTTXdZYuo\u002fzUGJ7z+G6D87KIHvxVXmP9IJgdMaYfA\u002fs\u002f+a\u002fyD96T8hxQVmUq7rP2mgEI389t8\u002ft2N9csNy9D8eUs4Do2jkPybNMYz\u002fTuY\u002fXo\u002fGHes75D+zlq3n1hP1P2LC\u002fu5FnvY\u002f1jBZ0k3y+T+PNyH\u002fbxvvPy9nTd\u002f75bg\u002fXjCnstt137\u002fnYKxAUe34P3kf6Gx4AfA\u002fEXj1Gdy81r9gH5WbCTL+P54d\u002fectztk\u002fXq6eeX+E4T9J\u002fQcuWiH9PwmmL0EFB\u002fo\u002fxgrlfmjY6D8giPGEiD3xPydgtDvTYfM\u002fv1Go8dEw8j\u002fsMMI8xYn2Pz2vLVKCyfI\u002fZrJ+DNtl5j89vUZpnzntPwMOQp68CeO\u002fVQa5eIF\u002f5z9Ay4GVtrriPwvomtY3m8s\u002fkkfM3UUa4b9RscFdW9vFP\u002f\u002fk8TwDWeA\u002fWC8wDjx64j+m8xbFpvruPzV1pUf+pvY\u002fXpTIcyjA+T9rBYft5xzNvwjeojQc5cm\u002fR16w8wLO2z8Zyp9OVDvvP9cofqkat9K\u002fhr\u002f4Hb7+5j\u002fLH1vWnKHyP1ZLXT04Ut4\u002fgPJmeTxA5T\u002fasLZc3g\u002f1P+PWOoYTwfI\u002fvYgP6NM60z\u002frX1T3bmWavx+SmUpxTfU\u002fApYmTXD88T\u002fGb3rq94T2P6kZyOpWj\u002fU\u002f2tamwyoP8z\u002fwjDmFSIXjP2djrpW+JMc\u002fvFdbLSyc9D+LE0sKKw\u002f4P\u002fpEOw37A+Q\u002fPFpCOGuk6j96Vw8gdUT4P1sF7mVb1vo\u002f9gLzfpyZ1j+AzZ8X+TDzP2czNvK0P6Q\u002fUWkDqCm+8z87BSEc3oHxP7uUr4FaEOo\u002f+dWo8JGZ8j+bkeVVOcbxPzsELmsIfu8\u002f5ho8nm524T\u002fjIb2XHujwP35kLNcnHPI\u002fqKr4fAgF+D8hKXZEgm\u002f0P6z+5dM6jPA\u002f2mAvlZxP7T+uSMdzMAj\u002fP+XAJhwCTes\u002fgqFIjqMQ9T8tPFZLMMPyP8HvhZ7k6vs\u002fmZTI0M1E8T+inDbKTTb1P30DdtWhdt4\u002fucYQnJp39j\u002fC4bQtCvjwP6zgL2\u002fVGNo\u002fOyqMnbH31T\u002fP+NIEW1PxP5ndlVFS1PQ\u002fkWEVfnNE9j8pcDLXjf3UvwgkuQEGAcU\u002fEIHOXRFx7j9EX3BkdzzmP\u002fAKKrJjH+o\u002fZDMt2VJ+8z+jtFhvzX7kPyXgv1GAHuw\u002fk4jrm1JQ9j90gECEhPj1PxtcNXl+2PI\u002fXcH1MRZp8D9EJX4sEGjFv18moGkNtdk\u002f7266k3vz2z80mMS3ddTmP+XwPKaEO88\u002fQFIQ6XQH+D\u002fdGOhJ0Q\u002fvP1gFfT+5\u002ffQ\u002fhMQSinwO6L8="},"y":{"dtype":"f8","bdata":"Uhv5LFWd+r\u002ffzbJCNEDwvyBYzv+E4fe\u002fpnJygXyj9L+YEhhY\u002fTP4v5ekHu\u002fx0\u002fO\u002fhIGcBKay479oZOween3rv76DtD\u002fwJOe\u002fDn5ANs6U579BOYq2mqHSv80cOBYJRuu\u002f+YYri2Pl97\u002fRdpXJY2LnvySNfVr49\u002fu\u002fTVyMDWef878X2poKYHvtv\u002fQUTRs0nPC\u002fXGnBaWEJ7b\u002fkdgygFRKkPwLeSxIwP++\u002fPDsMH6Umor\u002fyyotKoVr2v\u002fPlquun4NK\u002foFvAm1Ar\u002fL\u002fo2WTlcY7pv8Wsj8tAXem\u002fCt8wP5Wn8b\u002f2yxR6LJbtv0Ip9HBYqfa\u002fgbz0ZTE24r8CKuq6F+\u002fyvwgbcQ\u002f2BvW\u002fiX+rS9k88r+ekvyE2VXavw8GcmM3M\u002fG\u002f2dIV\u002fBL9z7+thiVHFl7xv99m58zUWuq\u002f3xIp3raD6L\u002frn7H6WfTyvwMYAJHvMPO\u002f8o0I4i605r948CU+az77v6AjKvGakuy\u002fJ4pkzcCc\u002fL+WMouiWdH2v1\u002fj0R8qBPG\u002f+X1r22mY8b\u002f1GKgIdqLjv9kIH7cZ4\u002fG\u002fuQrv\u002ff2P8b9Vfpk0ORf\u002fvzjjEKEg1uW\u002fvTC7FFRc5r8BqP2qMaPwvzyu8ewpBPK\u002fP1aB4ByS8b8hMG5G38j3v+nEU4txueS\u002faazqMO869b\u002f5pek+JDz1v3n28qDmGfC\u002f4AxBzNgg9r+M0wlKCmP0v\u002frhEwiOb\u002fG\u002fNW\u002fR9CyV9L\u002fhXpCwIaLmvz50oBKe6++\u002fp+KDY0k+9b9rl\u002fetpIHuv\u002fLZUui1FOi\u002fFpxWlH2I8r\u002f9D+iRzv30v4He96\u002fsFOe\u002frT+w4t9\u002f6L9aKjOL07zav6\u002fEAxgqZPG\u002flNEZ+3BT8r8kv9IwBprZvzbMFAqyhey\u002ftl2xwMcx8b92QlmHgb3Fv7NfLQ1toP2\u002f0tomSbRQAMA8Wbnxytz4vxAeyR\u002fWXti\u002flSQ\u002fiCJ697+E0dmrYWL2vwpC51NRxQHAlOLu2nP+878BafdbKYTzv3tgWbxM7fq\u002fh9VjE91A+r9D+teMks\u002fvv9wWrsYF8PS\u002fa5VNFnKU+b9E2IR7JVn0vztrPCHQ4+C\u002fx8EfgEXQ5b\u002fg\u002fRTJy1vwv9pdy9aJGPC\u002fxFnHegKZ6r97Rr9TY7Hxv8M1hDwB+PS\u002fKSctk1s8+L9ECEtrCxr3vyryL1oJw\u002fa\u002fOAeds70977+hlkY3iCbqv1CecpCgNuu\u002fzCsl0v4O97\u002f5WiV1FI75v3Ys1Oji4+6\u002fquZNCW+x8b+w7r+Gq3nnv1uO702UKOS\u002fSW+KM6h087+YX9iNJDPzvwi+0JIZaJM\u002fZyRKNejX6L8tvttJuFngv1FI87Rmyey\u002fbpQXM8SA\u002fL81M3Er+EX2vyZrd9mq1\u002fW\u002fTUCR01U29b9sdFO3jP3xv+gpVEyCCPW\u002fy\u002f2781rY\u002f790uNknF7zVv7Du8YZqR\u002fu\u002fsO3g+9YS5r\u002fy9r5oGbD8v151CATKMPa\u002fyCDu1MdR9r+WlcmtZ5\u002ftv4gtv+HkGfq\u002f\u002f2vHjIUz8L9q3pGJpl72v\u002fuOPiRmfvq\u002fSpNgrkr+8r\u002fv\u002f4ha3PDwv5CVNBo7wPG\u002fqjNShakZ8r8fSL8hMHjyv9tLz9CUzO6\u002fGWWr6xJA8b+2FAj2HKHov4hbWCYA1++\u002fknlg\u002fFKe9r9vmhiNwKDqv7uIG3GGo\u002fy\u002fcy8c5rtG5L+nUnrnAnX8v7A\u002fI0r78fK\u002fDNogPxAx+7+1LDGaqsz1v6YH0PbLufW\u002flhqDLuZD+b+RNhsUa8Tjv0SMop6S+fW\u002ftEP\u002f7RNe2D+QPqUUmDDqvzNT1DTzo+y\u002fDxOBgN+16L9Z6rRipcXzv+OwpcHZKNi\u002f+y2y8uWdyr81Kj2jg7zrv11w9hIgN9y\u002fNw2Cx7PM+b+kg2GjNPHtv3Fw55FrePO\u002fghxEo48P47\u002fbhRa2Pgbiv4K1rB2bvuO\u002fTUg7Dvyu878Ml8Xjhiv0v5qxdWENpse\u002fbdjVG3fr6r\u002ffHlCvuoP0v2+WVCwF1bU\u002fC2EHOL1N8r8MpMDYhISiv126S2PY1Oq\u002flS89emnC779OjGYqiV3nv2aV2JWtdfC\u002fSmi1JO0Q779IdNqWH171v9gVUZTGdva\u002fYODI30zY6r854zpJ4cHwv0os6y5w3vK\u002fPg2Sg8Nr3r+dOFOUpoTkvz\u002fvuVE8WPS\u002fglANVvzT9L8dqhrIKTH5v93\u002fsNIfo+C\u002fW+G4iV5s87+fj3+jqvj6v9NfJGOYOvi\u002f0YIpcTQb+L\u002fvrYIdkW\u002f0vygNnojVMfe\u002fWIW18Pq73L9TfPH2aib5v6vZwIOzq\u002fS\u002fT\u002f8\u002fGWtPAcB7DaHRpQbqv2qQ1wLMf\u002fK\u002fmFS1nsCf878\u002faqKpV1ziv9ZNEtzcsuC\u002fgOb8O\u002fwQ77+rX8zYVmjyvxabb1SeS\u002fi\u002fa2vHU8TV9L8di9+fQHH5v5bfPDZ+Rt6\u002ftvXPvCJh87+HY2OIc6P0v9dMeCeVRPO\u002fERSWjU1fAMACufQNBAgBwOoZuD+k4fm\u002fg68ArstH97\u002f4Dm4KiwPqv6qVcn5JB+2\u002fm2uAmnSj6b9q9tjIso73v6Vi3VZf4\u002fO\u002fZaM3w\u002fQv9L\u002fc+UDbS8T3vwzglnxOj+q\u002fOawPVlf16L+TsiYnlY\u002fpv6ZvTqJBUui\u002fRXL7GvnS9L8zsGBRky\u002f1v\u002fzvk1ho4NQ\u002fzeg7AWbo+b\u002fYuGTQ4HL2vwrfBoPVReW\u002ffX7a85DB8r8oGPoHoVD9v2Owi+1LM+i\u002fYAfTRkf0vr\u002fVcwJwreLxv4ndxMAvs\u002fG\u002fxyLgFS3q8b\u002fHj9tx8tjpvwJkTKdqpvS\u002fTp8NReuF97+blUxYBzy1PyRod64fJvS\u002fvvtaOjKt7r\u002fOrg1g+x4AwNx82gyLh+W\u002f3FHzaNTm7b+4ivvclxvav9qAoy2si+u\u002fsUVRzaIt7L\u002f00xD9xV7pv4CLIoaz3wDAw17YrJN98r8WrjDEEJ7xv58g96DKePG\u002fL5rvr\u002fw77L++X6W7Ev73v6nUGIVbxfO\u002f\u002fVKNymWI+7+m\u002fk2TNfX3v6+IzabPCPi\u002fwls0u\u002fU7878UqtIEfN79v3n6TdDr9OC\u002fzaJDZ23N4L\u002fWEQyMrdrzvx\u002f4Wfi3kva\u002f7zSM8kE7978ck8+nxhb3v810L2TAI+C\u002fK3bo6ynW9r9FphlayOvYP5eSMv\u002fEQPK\u002fXB7expxd6b9HNNRHm676vySfBoa5afC\u002fuKKdMI8A6b\u002f1XhxQAxXlv84YX1ml8+m\u002fBPZXfOTQ5L8Q\u002fOMP4Ovyv3r0d\u002f0JsPS\u002fUCVGC4qc+r+KlEZtSHLqv376dAdxxfq\u002fXenCj\u002foa+b8wNvjeXWv7v0lriBUed\u002fy\u002fH5d5mulo8b\u002fVn9D\u002fsM32v5Jf\u002fCecuve\u002flReAF8wQ87+kpjqyhEz2vzsMPpYI1fu\u002fFwYzgaYq9r97xrx00jTnv08r+jT9UPK\u002fWmHHoNVH97+rMgR7hZf8v5F84hDZr96\u002f0Tm9\u002faDU7r9QAM2m2+Hyv+KAcT+GG+C\u002fHrLEbXCI7L8+O2n4D6T1vwyiTiWikPe\u002fSmSHlHHw+r9zJOR0EdrSvyjcQq\u002fCHOe\u002fCh4iJgvm8r+WbnGoV6fzvwkGy0+pQ\u002fm\u002fAmmGXFWD379Qcz6ADi33v78wunkq1\u002fm\u002fspk6AXgl8r+8ZNVz\u002fmfzv+Rv7IXczvO\u002fmeBA6GJQ5r98DvDGEcr6v2LZ6BN7GtW\u002fgheNwqk48L+nKCIcM87fv9HS4QmOhvq\u002fjkRfQ2g7+b+wkVjJpYrtvxfyeWozIfi\u002fXA\u002fWO88lur8BO8K5IjrjvxjrUKQhRvO\u002fHdAPZaP59L8fwySeHcrfvzG1wDX\u002f792\u002f3JCFmbbV7r8Vt2w3opz0v2I+LzlpnOW\u002f5LhZBPXy7r91KCPQFVjwv2P2TsPa8u2\u002f7dHPyU\u002fR2L8ZlmZUaqjtv3QzK4am5vW\u002f\u002f5ArK+Ys+L+oa7L882Ptv5rdraziAvi\u002ftwbZ4d186r8FNk2HIJi2vwDINIdcF\u002fK\u002fH90sbrpo9b8wrmLm2dnpv+Xvm0cnQ\u002fO\u002f3m4fd2jb87+bTHL1bNPyv+0F83uqQO6\u002fLI6peYhl9L9D3KiN5Nbqv+47xAWcUsy\u002fIHWQ\u002fg6F9r+El3Fzrcb5vy\u002f+nH+Ouuy\u002fJp2Equst8b\u002feisBWFaP3v152MJLFJ\u002fq\u002fJhQZHamB8b+aEfaif4TgvwV6Whh6\u002f+S\u002fQUYAlPd987+Lmh0fP0T0v1G4PpgCe\u002fK\u002f8a15UUwq27\u002fSz\u002fxu2Pzmv2aA5DVCFPq\u002fqNXfD0eL7r96j4neiEXrv\u002fhJoxgj7Oq\u002fuaq2e4yB679UFuA4OC\u002fzv9AsB+rry+W\u002fHao1leJ+7b+PKWKy5r34v7UWfZMpWuS\u002fsCjwaC4+978cexF7AL\u002f1v8IL3lXgUPC\u002f53dwtQJ5+r+ENKmoeLXcv1NLKN5e2PS\u002f0ruOH2ps\u002fL\u002fhZjZxzVLlv4+tNScPreK\u002fz5GFkb8s8L\u002f+aRqVKof7v4dkdOw0\u002fvS\u002fYoKG3bxv8r+MXcHsf7rzv4saFDzP4\u002fW\u002fWyTs5onh3b\u002ffsTAZj3jxv7NFZUYjSNe\u002fJoYrM3QG879pWU35oDzZv2BWtMKL38+\u002fezf014BB9b+yACDpBXX8v6e9sGxt\u002ffq\u002fpOpDpRT18r8="},"type":"scatter"},{"marker":{"color":"#C8553D","opacity":0.65,"size":6},"mode":"markers","name":"\u0110\u00e3 r\u1eddi b\u1ecf \u002f ng\u1ee7 \u0111\u00f4ng (churned)","x":{"dtype":"f8","bdata":"3dWd7TQN7L8UnAc1vljiv8UIhONnbeG\u002fTAhmLpEj6r+QHxvV6H0IwP4BAqC2CgPAcWUmxNR957\u002fGZScZ9d3vvzPN+cos8hHA8rbSH5pt+b\u002ft0Z7QXLTuvyiFPVCQpda\u002fqisNnrKg8L8KzJOSKfQAwKZW2VY9C\u002fm\u002faaznlZJxA8CrZqXZ04z8v4JUmY4hife\u002foRPRscIC6r8D5e06vx3gv+8wQJQSnQHA4w7cA21+6L+U\u002fwKNE7gEwPJrrIxfzwDAt5siI70X97\u002ffa6fcE7j0v6ff\u002f8UCNvS\u002fsh5Pk2Qh47+7O1n8XPbdv846g1KKrvC\u002f0hAWqf6g7r+iU0YXpQbtv8CQsyd6RwHApfO68pZY+b+arsuNUF7uv7D5\u002fzw1R+2\u002ffEz6t3+pAMCJEirNpDACwG+GZTJ9W+a\u002fTPNY\u002fvhC87+zc5wR\u002ffHzvx9VL79e\u002fva\u002fFxW76adb6r\u002fJGl+7nJ\u002f3v6Phei2Q1gnA+TJl4f\u002fn97\u002fpOYAs2n\u002f5v5\u002fEkcMAHfu\u002fwcKV5ryR+L8oTA2TUmbmvy8XZXRnse6\u002fmMEAqPjfpT+MhTytGS4EwGIZ68WmRvC\u002fZQBf22tLAMDPac\u002fjCYj4v8LN5Kxvbsy\u002fXOUYuTsiAsAE4iWJ8JP3v2K8K3sIh\u002fi\u002f9CooEOIXAcDG3ly3yM38v9f7+0sijfW\u002foNopkw6GAcB3dqnnh2YCwHtmPIO3FO6\u002fBYbNc7TV8L+sM5gd2T36v\u002f5NAlFP8wXAE9cvXyA9BMA4ZvqA2RMEwOk07JDgwwDAnbzYDl9K\u002fb+20t1lAqH\u002fvz0fH9+BnvK\u002f9UhvlAhc\u002fb883N2WXo0QwCDzZSW2ysU\u002fYTQLcyWB+r86cyCucAAHwEfgwy9UkeS\u002fwODeMUZ06b8MLFtPphP2v5+HRGdOKQDA753gkYji8r\u002fOfezUPLb2v4UOr5Ss0wDA7KvRLNZu5r8xqTu0l5cAwPiSYS01PvO\u002fNeewTBKm8b8LbsIPSU3+v7hGopXXPui\u002fkIxA1PLJ+r8ngpQ\u002fKDz+vz63m2i4Fvy\u002fSm+cilghw790RR3gRJXjv52lHuxqpui\u002fg7Kp\u002fU9d7r\u002fi3gaIJT0AwJnu49f\u002fQwTAM+GUsOGL6b\u002fvnlKYCNf0v1VMSnMSbQvAyV7ikwSv8r897oU6T0QCwEToU6xgaOy\u002f7E7OzoN9AMBHtD9xBxH2v6LGOFmW0\u002fq\u002fbq3jZaTP9b+eR+0hyq35vyeGM2kHlaU\u002fRgXZy3Mp5L9jmRDoODkJwLlmEp0CZgDAVNd0n4x0+b9hmbZxuX7yv4uSwiUKEee\u002fZyY3KzLk9L8AXvlb72rgvxXMdrx2awDAR4\u002f4gmBJ+r\u002fkqIJBSPrwvxKBoIX\u002fZ+a\u002fripk0uLv87+05rNl4+AQwGgMOZhCI\u002fW\u002fovzpWQJB7b9ZBLNsXzj2v2Wf7hDsawLAncAgs7kw8L\u002f6Z+2yWtTyvwXvCEtmHvy\u002fv\u002ffEiA8V678jIcs8LnL0v1Tzh0D5BcC\u002f4YSL0\u002ffs+r+Q322eVdwQwMacxLrWFua\u002fGQDGqfud679cXkU++o7zv+EVhC9i6Oq\u002fXfplUAyX9r+\u002fG2LAZN78vzcIF24pRPu\u002fB12W0LpU8b+k5tdjDPDlv4zr4U9I6um\u002fejAtTE9t9b936jskrjIAwHf8PBuGW\u002f2\u002ffZLiyLY6878hEYyQF4zxv2LhpipZG\u002fW\u002fOSSa70Wu\u002fr+0Rpz6D779v3i7sW0xh\u002fu\u002fd+IGa8868r8R5jRAqZDUv2jGOPvAmOG\u002fARhtY\u002fOV9r+Xm\u002fHkojDkv5A2fg4QCv+\u002f2cfszlXqAcCdum5DVcr1v7EWk7+MNdW\u002f+fPvNMLS8L\u002fJHaaw0XD5v9gAsE4RJgfAvyr51sAdA8AeASxY\u002fA0BwJrTpdyGR96\u002fM1spAPQBB8BxFWv+0Gr+v\u002fvw9SCAIQDAg6aWVLGv5b\u002fWs2YuJ\u002f37v+syvGV64QvANCt\u002fOiKR\u002fr+LyVWFCqEIwDJ1kpjYS\u002fS\u002fjptO9zrYBsDzShv+oLL1v18hx6yHIfO\u002feMP6QwZC6L8\u002fno38SNXhv77LwTz1\u002fQLAOeEAi7zi9b+LIK7kxw4FwACxjYVbePW\u002fOt\u002f6A5+29r+vdcIzGFnjv7XXu\u002fLIbvS\u002feSED32FtBsBOGSXTbZrwv3zOAsIiUue\u002fCqZsP7Ht8r+g62uQb2oPwEBFyxObNfS\u002fbCDpniuY8b+AUEwAE7nkv46Z+oNOj\u002fG\u002fQc5OGtku+r+mqiRJNqABwKeVk3eVtd+\u002fMuxo+mQlAMAiK9CJZmj9vxrC5o7tWeO\u002fEaht46rO8L\u002fxUFEcxoz2v1nqUTvwlPy\u002fe58DzAmz979ugqjJOerpvz+I+uxDeO+\u002flPu3YyT097+c3XBNRoPzv6lw5kdRGvq\u002fJm2aWtpi9b+VTdUojcoBwNI4g+ZebAHAFgDyxqerkr\u002f+Gr2rbln+vxYu\u002fqAR4gLAQBomJhBS5b+u514SKwoGwBRUDjjz2PW\u002f1dPbMHQp+r+3gi1Sjpb4v9k1XtVUAf+\u002fO5H5DFxG4b\u002f25pXqHMH4v7dF0SeNaQ\u002fACcGwR659+L\u002fjkNPqOI\u002fevzqqzkdBcPK\u002fxIgb3Swh8b9EVpG1jvryv7ETB\u002fNuweu\u002fVT0K1TovBcCLwCOwKFXzv8vckE9bXvG\u002f09unic2M6L+7YnDxo6\u002f8v5vp8drWUvi\u002f28WApZNq+r\u002fq+T8xQ4L4v1OqE00\u002fFv6\u002fyuDgejNd8L8dlUIreCP5v2yZZSG7juO\u002f6FgSpsI2EcBN49Fj5fX4vy8HOPlygfi\u002fGzTd\u002fnFNB8DtWqawqWn8v5H3PCIiRvK\u002fyOoIpGA+AcAxlSO7\u002fUz9v5fZAU5bQ8Y\u002fDxdXd65s5L9+E5axha4BwBMmeYsD+\u002fu\u002f4lqKl5gY+L9zmDOR5l5Zv7lEFYr5Gv2\u002fAHZqwafK9r9CAymLFpb4v++c4S\u002fG4OW\u002fiQm5WX0\u002fBsCl+ZJfzfTyv0RK5dD6nfS\u002f5+6QvmaN+r+0LoPDgkv9v+E7d2LaCAXAeHv57Q1R7r+LzNj2g8Xivz4ii9eXmOO\u002faUwYqV3F\u002fr9IPX9pSWDcv2TEeulAQQLAH9CZNCdj97+wlyAAdOj9v\u002f\u002foJBTJRAPA4P\u002fYcXTD\u002f7+vFQLi27jkv5K9gRZknPW\u002f7OJiq3xM87\u002f5iDcBBzL7vx+xjmZiCAHAHaLmXNZ1878lwigY1Uv8v9Pxvp4uMPW\u002ff1534ET66L+vtwxKJ5j\u002fv5OwgzZY9\u002fG\u002fRkML0nGk9L9RKuEePJe5vz4vP\u002fzs9uy\u002fyU\u002fBP7Tp9L9WyQ626mkBwE5BsBSYGfq\u002f11fTWQ9S7b\u002fwwWqyoJIIwBMDjImpCuu\u002fKem+OpBy8b9XLk5IN+QDwIk\u002fdlysTvq\u002fyFNg5F9P9r\u002fgydkHJzHzv8OqNU5svfy\u002fbYHEwGkQ878CKZTlon\u002ftv7zrbnybNgPA6af8EqKd\u002fr\u002fT2ABUuFICwCVdqWGrIv6\u002fmebShCrM4r\u002fpBzVgRYQLwFZu6XPWeeK\u002fOeMeZE4GB8BqcdKbeITxv3KMkNKojALAATRsvdnMCsBfm0BRBBeov12RdgUNP\u002fO\u002f8v+v3Et1BMAy1zh8OPT0v0iDitw7fu2\u002fYvKw86pO\u002fr\u002fsek+z45nvv3JzXbbUP++\u002fdrApMcQ8xT+B9glD89L9v5YKIOWcDQzA42C5e1FQ4b9wM1npzhgBwGw7nmpQSQLA9bpX9aFJ9L\u002fsiOyDMwUMwGXEaz\u002fdH\u002f6\u002ftQOwdjCaIL9PwGgH8sb3v\u002fEmVRhh7u2\u002fDe5s+xlMEMCUx4\u002fcKHj2v3YqG+3LNfG\u002fT78U3HVg979JeyZkkMoEwKI\u002fW7jge+i\u002fQDkomHQA57\u002fBRpxlrowBwBfqzmDygwfAOBMsGyc25r+4r\u002f95QzP3v4YCmjFI6\u002fK\u002fzg\u002fBLdx7+r9BTIuz\u002fdoAwB2x2S6YMfG\u002fwQVyB3Eq+L9J7GXLEAHwv7BEfhqSQfy\u002fekpYSEMn\u002f78kymWOe5novyg96bFpWda\u002fd3xAKyzHCMAazH+9I2nwvzQ+9Jraa\u002fi\u002fl9+slxap4r\u002fEd42zq7nxv6YRTi3NQfC\u002fvLwuQZ+X8b\u002f1tqnNH7bpv43dtvwKgQTA7QUVcv9u878lxgchElL9v2g76pnIve2\u002fBMeQexPk778UTW2QhYUCwFPs8oa35fq\u002flHMVilax5L+aHUOFQBH1v9kA1p4PTvy\u002f83niXdoNAMC63uuD\u002ft73v853hV\u002fdpvO\u002fPbS9FDPB2r96rubyd1\u002f1v7cbvtteoeS\u002fEnMqTnaq5r+UXsStj4D6v\u002fH1mZaGhALAQcXHNsXJB8AMBv7koQ8OwOo13XyVrgfAbwC9riHE9b9M3oSjxVrkv4pjOkLErv2\u002fAnzmM3e5B8AicuXMpm\u002f1vxZnVAiOIQ3Adf7XgRuN\u002f7+zKMs0ARLkv7ysbCjd8fS\u002fXwqoiVbq77+5bvLh8OLMPwHqrhq1Qf2\u002fh1BrXkJC9L\u002fGECJhn1\u002f+v++pshjqGQHAPDVeI6XV\u002fr90B5IMGD37v3F3tfCAX\u002fC\u002fzQ5pA22X6b+qtndTdrrYvwhsHX+GdPS\u002fWQK8ZBjBAsBHZxBhuZj9vxh6m504Jum\u002ft65IfP4B3b\u002fI2AFjxsf7v1gJdsCQIwXAtmENuzAcDcAQxxs66DT3v5UBS9M5NtG\u002fXrw49PqiBMAawfhv\u002f9IEwGMq1SEHcNS\u002fQwx3bml\u002f5L\u002fdubFIjsr4v9xBrCGlOce\u002fPn19ZSzh9786hRBj1WX2v7tj0GK5d\u002fG\u002fSbwro\u002fkrAcD2d\u002fieknnqv3lhxzGPH\u002fK\u002fWShSCrgTDcCDSzyGt8r0v1EtHu9vF\u002fa\u002fsoRIzibF9b8A3KIVrUDzv0mH6i0ulv2\u002fvNe0vlUm8L8oVMDiSAD8v0hR1HmoTu+\u002fXJafOkqC\u002fr+aidsx3ED2v7nrx5ELEwHAKyQTlqA9779MiX8ma7\u002f1v2Yq3s5sxvO\u002fTyKPM9qq1b9DaHsXpxjzv9iL2Syvxs2\u002fbbqwpsTZBMBg0MKOy6G8v2SwB9hZ+vC\u002fMJ4270yE678YRb2VG2gJwMIa+S155sK\u002fltxOU+EY\u002f78C5oIThB3sv2QzR7y8agPAw4VLzCcz9L86iYektEH6v+p5n4NQxvO\u002fQCDntQtP9r90PhX+\u002fM\u002fwv9MOkc\u002fwHA3AUwe5i2wS678gXlE+5fj3v\u002f7bO+GQvu+\u002fT2vxMOAN+b+sxTIIeZj7vw27\u002f0ese\u002fy\u002fdJyaGMfn8b\u002f2XQ0VOBDuvyVMBx5\u002faP+\u002frJJLjlyPC8C+vjaY3ob3vwQjx8LGXBLA+vvc2uK19b9ieVx73Gv0v2nzWrHuDQLABLxlY6tbB8DaEK41o8rQPxgXVYAub\u002f+\u002fsHR21gZFAcA1RmQVFk3nv4tmRe82xfS\u002f\u002fjTJe7cd9L\u002fpWgP+tLn8v8BqImB4dvi\u002f0n5\u002fUOu52r8AiICGARLgvzNoJfYMdPu\u002fOSGKSqen\u002f7\u002fhJs3frCviv4a48julb\u002fS\u002ftluU+1f0+79K+5x0jGEEwDk6FzBxrQDArl46CIxH5b+Uc5WmjLj3v9Lhu\u002faRmgLAHmJDqO595b84lpLTwW\u002f4v3tq7xl16QHAsDFvoeiK+L9+smnRR932v4D\u002fDzvTHAfAsc\u002fohVgdAsBYSaA\u002fKkb6v0pI3qaajfK\u002f2t+tslRq3r9DlQK5FuTkv\u002foeYlDbft2\u002fTMvL2XDuAMCb762ohPz4v6gZwgU2Afu\u002fAZkfo7Ny+b+s4r3C0ED\u002fv52ffTbnQAXAl1N+ABrFsr\u002f5S0Zep2Tav+sbbZtNd\u002fe\u002fTfOlwEs\u002f\u002fb97Vppwr\u002ff9vwZ1ckFqiALA8VQxCxwF\u002fr+LxIV4Vbn1vzJlSTFG5am\u002fMODe4sIO7r9UIsB9\u002fsDlvxp6XUPdfvi\u002fnnGwyos\u002f478YHGBb1+XBvyIQCrYwFAPA7YFPHzkZ47+r\u002fOPOwSrwv4KQITdpwOW\u002fnR2h03je3b\u002fwGPw8\u002fvUAwBSTsB6bcRLApg8U3e3K9L\u002f99Vw2MtQGwPE656zlmeG\u002fv58KUBcFpL8heoyPJpv8vzkJcW9iywfA7p3evPcy1r8BmO9i5UP+v0mlB\u002f7MAwDABtFMLBFmCMDh8wmR8mX4vzbD25KlPsu\u002fB0soBsiY8b9pgnrYjIL7vyDYoUWjPg3A2OYWe0mp8L\u002fTWmIifiX9v9EI\u002f2td+gXAjfMpPFqe+b8fMVB+X\u002frYv6hLJegd9\u002fu\u002f7UyO8uqfBMBthX5ro4\u002f0v5P17yzwvAPAAkJPBKnqyL\u002ftjporN0PxvwUIQzlZ2+q\u002fJXpyRIMs87+2GdVluv36v11idprEh\u002fu\u002fHWzCqH3X5r\u002fotf+GUyoJwNvGRImnx9a\u002fHxkd0cCCA8Cc+UArGAfbvwgyKUD2lgTAC5w7e7DRAsBxcV5Znrb9v5HC5wN2dgPAVueKbz4zAcC\u002fKVsvCU\u002fzv0490sbO5\u002fO\u002fujpVSdXj5r\u002fGkVpDJZ4AwKsQ4zFEa+S\u002fPnkvC8zG+7+F0KA7Jfb0v+pGj5IbF\u002fK\u002fECpvkQTOA8CT1e1lZQnvv1AaPNQMYeW\u002fQylFj6h977+\u002fk0uPCkzyv+9XHimpouK\u002f"},"y":{"dtype":"f8","bdata":"53gkK6wq\u002fD9pjKp2ROjpP7a7FzZE5+4\u002fH0SSZ6c54b\u002fKC6dWuwq\u002fv4HosoBEStA\u002fhns4kMBi9z9JncJPR7Pqvy+180c2ZuA\u002fDcVpa6qY4T\u002fuHKPujXj0P+wzvKZ3vt4\u002fYKdfvWcvAUCVEfT\u002f9gTmPyZNeAidPeq\u002fDzp\u002fRlSx3T9sBTguMNDyP8VAUZjiVvM\u002fAcBtbfasAkAoTYnRRpXsP+X0rXL8P+e\u002fcsu9yjMR4z9HCae+0zvVvxxBRRvRSOK\u002fr4MB53Re47+THwfhaEfnv+Lnq0jbgea\u002f2xjEc78s6D8ZhsnJH1\u002feP18kjEhobem\u002froiZ20cz5z8XNAiIKo3xv5L0RReFTr4\u002fv3d3iChe\u002fT8XkY7tXdTuv9otmKhewbM\u002fTRWBk0bJ7b+KhfDuQyb+P5e\u002ffptDNue\u002fcOq9k0Cc5L9OMUFHwRbFv0w7FdnngO4\u002fWKEN3FoLq79RQcEvJYX\u002fP5WgUhTDz6a\u002fLQsox\u002f96wL\u002fqeKsoZ+bpPznfGr0Rles\u002f7Jl2WfzZ8L9pHCBB1wXfP5LTW9ItJ9i\u002fthfPHQcz7D9WLFtH81fiv\u002faCBE3mwNm\u002f+FrNLBLypD+hilhJw6jyvwOEapdr6XG\u002f7gaGcBMu7z+7AYKGGaz0v1nPaQpuhvA\u002f9rg0M5fc5L\u002fhnnkwh\u002fryP89witmJmuw\u002fB+0hmltwyj\u002fX5Zj2rLf7P1Ecsy\u002f\u002fpfG\u002fTyaCDYAH8T8YL5P7q+S3P+eHfKJbzOs\u002fW\u002fHLZC7C278Nf0Bc2aLdv091gvsul\u002fA\u002fYwnuyU3Q6r+46dNNAw3yPyXVHR0tvvO\u002fWmP0z7\u002f\u002f7z+d6oMKSTfXPxi6gzqCLfs\u002f\u002fqmmDQ4hAEC7QdbQb8P6P5HrlW5FutC\u002fw90jPAmRwD+mi+d3p5z8P0uiUdSiNtg\u002f0i9d88Pqtj8zUGQaKdHXP7V+HCtIceg\u002fvUuDWgWRjD\u002f1YNekDbTnv11ZCZ8Ov8m\u002f0dT4EcKh6L9FnDMDedkMQBLt7bDYU8y\u002f8gjPVkdS+z8QdIMUgq\u002fzP2pYkxalOOo\u002fhgxmDjf\u002fyD8S+dd6z1juPwBPb8XHyNk\u002ftsdxz1poAEC1h2XZsnzxPwYsDkTGc+U\u002fJgzBxCAj8D\u002fhisCcDALWv1cC4VUMKJ4\u002f\u002fJemgkxo8D\u002fdAuBgeNjmv9jqDq6DYd6\u002f39GyhBA3sb\u002f1Ojv9WMruP7RH9A+miO+\u002fiIaQZ4ljw7\u002fXFHJpAvHxP7w2u9icadE\u002fnLQN4yo78T\u002fwHFNL\u002fY77P4FHhAcNsrm\u002fQpu66NXu1b9FoLtY9FzAvwqDN6SAz9W\u002fu0IA81D75D+ZIH4k\u002fJjQP5wB7aUyp+m\u002fWcEVDBb0yj+bXnNXCOX3vwYO9YJI8dY\u002fw\u002fmBVWqE5r8tYpsBGGvZP2ZV\u002f3uuS\u002fS\u002fH80X9ujunD9yhhSHmwflP0l6OJxuJe4\u002fngDPIqUxAUCddaeKJWTVP46Mh4joW\u002fI\u002fs1RYBceM4T9pcliSuHLpvxrRmrI8EPg\u002fgsFGlkOs2L+Fcq9ACC3ZPw78SSdfxea\u002fVHWcoTLn8D+rj1XqoALov1KZYPJUVqA\u002ffHFv8J798r9O59+lyMXuP4hcFoWLTPs\u002fEgyauB2A4b98AW770zjcPzSSrsvs3PQ\u002f69+3Zhy11j8hb9+QeBv3P5y29z2bLcs\u002fDwiL5X6c0z8u4Xrl2BDzP2fESLF4h+e\u002ftYsmRWKV0j\u002fQpLHMf97Sv\u002fiFyNyOsnC\u002fdwK1IUyABED5qXcKyP\u002fWv6VCzFxMLfQ\u002fr7Aoknr44r\u002fBo39i5I\u002fkP4S2atVpOOq\u002f5wVBDYRA5D99kXpLE93cv3nW5pMpd\u002fI\u002fGh6sQmXy2L8aPOzDPFvhP6BqXmBqRwFAjqnni6XK2D+k8s4w\u002f\u002fnsPz\u002fdvFaKZau\u002f+sIMegan8z9nL92jLwoAQCwnBo+s5ts\u002f92HYVTxj8D8rdjtqquruv7Z78EUWhrA\u002fQWFZ3Nbb8z9mwjIEe78IQJyb9XG1NvW\u002fLx3fos4D1r8JlNH7SaHXP9lSep78ree\u002fWJoUpqWK1z\u002f5OZXV5z7iv3206y\u002fsSfA\u002f4MV87JYA5L8Szw\u002fPEUX7P\u002fTY2AJLC\u002fQ\u002fCw1SB3ej2b\u002fkpl1N19nSv5CKbTaQQe8\u002fQ9R4bqcO0b+igu4l+LHlvycuuMIwfMq\u002fMLRh9oFu97\u002f1PE7\u002f+jbRP51TutfRUti\u002fOBRl4flE5j8rh8dQ6aHnPwLR491puea\u002f1cYT+ATv8b8tPjIWElC5P1Cnui4n\u002fKC\u002fuy4vwXeX9D9VcEuxyYvtv5YHSV\u002fUtuS\u002fEBhVd\u002fmn+j+AwoQIqerzP8tLVC4Aidc\u002f0EOo+K838j+uEjXWxwS8P6CFNcZq+PI\u002fUo4Y\u002faExr7+r0Zzwg8i4P6D0iMP9NuY\u002f5SNOCUQ17j+fc5WDPbLfv\u002fJLzRsJIcQ\u002fdtaI7nsj9D\u002f85yoezOSzv5LdhNV+df4\u002fCLlZUlM0oz8btq6xKPzUvz5epSxkHOS\u002fgx6Ot+CRtD+Ss8hawwjev0GTlVlFsfk\u002fsAFy+Fp13j+opgZQmofiP2n0wNzKYNA\u002fNclrDYtN2z8x+qz9LpOgvxhkl2dslfA\u002fDMP+VK3h2D+4bgmF7CDIv81E8K8T5Lw\u002ff6aK+VKM\u002fj\u002fk\u002frcUTivlPybXyT2R1to\u002fK2pO23dY0z8UuXtq2HvIP+xJhlOQLvK\u002ffcU4DWAixz+X+5CHd7H4P+5OLrfC\u002f8i\u002fsGo4vwvm0r+8UinaIyLhPxcqeU+y8ea\u002f9ddRGpmD2z8eWyYftFrBv5GH87eNFpA\u002fWXzx+8GE8D+Vsw2CfDrwv2pkJIWAHOQ\u002fWHgQJE0kB0BaG8UQNOjsP7nzXJYKx+8\u002fQO1udCOu4z\u002f1bXbn3yCpv\u002fPDybUxfdg\u002fvPQ9tJoX8r+WNoiHmDXbPwlBvhSTZNW\u002fW6uU2H5t4D9qc6b3de7iPwg+8AJI26e\u002frwm81WWO0b\u002f4H+ZyBbLqv12ykk8hi\u002f0\u002fYkdE\u002fArPwz9Pao5OEe\u002fLv9lhuaX4Ovs\u002f3YYU12rT4z9MJDyKyOfmv\u002fHQPDOPy6U\u002fxv4YGZ0MDUCuaXOi1gjQv2kI8O8rePs\u002fYbZWats6378cKL9yZWnXPwPyKJpbi\u002fA\u002ffaNZsZbk+T+KA8bs\u002f9jgP8p7oTqVlPo\u002fH0O5kp7Sv79NGxCX5FnWv\u002fOWu71My+e\u002f4E+MSqQA5T\u002f3ucUGBuftP9YR6LLTMtS\u002f1c3DoGxV1j8bOLMJV1fvP0AdNNgwyNY\u002fGpL+pmafEEDh4b9vfKIBQGM0cEj8C6Y\u002f7d\u002febtfn0b8gu60LkDetP5kOVQaG\u002f9k\u002fRrC46UUhBEB1KJSub33Pv3n4BqGWbPY\u002fUhddNn2GmD8jRfeVCSDevzR2LgEmgf0\u002fD00sQqCd5T9YkXaMAznXP0IZJbNV4u2\u002fC+oL\u002fuEi97\u002fQ\u002fGyxrsDWv+QSGE5h3eW\u002fN1uXVR3eAECHQdz741zfvz33E60AfcO\u002ffPNENc+BzD+LusdoMaWoP7VnyEM3\u002f+m\u002f7rw+THYnAEBGZF9XHH7mv1ofGxB4DPQ\u002fmiYKDHI7WL+Mf6fNwTnkP6DbmvEOOO0\u002fh+1VpLFZ4j9R0DA+Ss7vPwZrps8IEOY\u002fwObCsufhdT9kR+Q6xyDdP52nnkxu9O+\u002fN2fRQ58e8j\u002f4AogV2DXMP8Yc7ErTM7M\u002f+xLJ0slZ+T8mINR4nLvovwBsMKvQtrc\u002f6w30XZBj4T8r0pNzTHeiPwGm2h7G3Pc\u002faABcFFlu0z+If2KhLWpwP96C2f3sFbI\u002fLRlm4DqX0z8D1OAEEFD2PykSwhhWifa\u002f16CgqJHz+z\u002fDT8rJ7FkQQPCI3ChU4sU\u002fh9+Z5yD83b\u002fZAJOebWrlv71OXx51u8e\u002f6Mpk7TEf1L\u002fu722Mwt24v\u002fJP7NaZQOY\u002fjWNSh7bk2b82f18lgtzdPyS34XC\u002f5NG\u002fHrlko0ZHpb8gJB\u002fo5R\u002fYv+PtqWWgH\u002fY\u002fys8QM3sg6j9zYCmK8R7pPyn45u82scy\u002frW6vNN5lwr9AApOyR6n4v4md7a+L\u002f+g\u002fRc637FXUuT+\u002fmHJ2mIXIP5+W84SJL8c\u002ffsEz74IO4b\u002fe0m3+DE7Rvz1t+x+WcN2\u002fX+6rqN4V6r\u002fAp2wQ98ZhP1qefTU8+M4\u002f\u002fxPF7Vhd5z9T+4e6yD3lv78eSq68d+k\u002fXIewhQFpyb84tnvpQN78P+ZaJK0DDs8\u002fXJeZ8Kqt6b8WTKGdqa3wP4CA7BPxjfK\u002frNN3KEHlAUC\u002fEiOYzKDrP66LrDh22M8\u002fYszq0j8c9D+5xnrGAP\u002fvPzrfUhnzBOW\u002f9VeMaS62xb\u002fj3bKYiKPHP2+tx9M2N9S\u002f68XCsHtJ7j8ezSX8XjfpP5D4\u002fkDBZuc\u002f29lFygAF0L\u002fzE3fvlHQAQFsgiLl5KsE\u002f++AhwsX31D86gB+j5pL0P\u002fQM6kpsf\u002fk\u002fSUE2CNGQ7z\u002fqywivAmX2PzV0gfTZn+q\u002fq+2NL64t6T8UgNfGc7+5v1B9JUdUDuc\u002f95x\u002fIxSMxr\u002fnDEPjUEbRPyGP4qvfL\u002fc\u002fH6xOIT9n0j8yakwiXU7oP5VauGEu5Om\u002f\u002fyBXjBDU5L9dFGo\u002f6P7xP9SCCswPhfC\u002f5yPTRlkQ5T+YHYwg+d\u002fsP8Px2o+Qv9S\u002fG3l8v13hwD9C+H0gayTNv1HlDDpyP+0\u002fLyMnYBtm1r8qI6R2\u002fFrnP3GuaaG9zao\u002flseHPdXU3b+fb7KJljoKQBUaSYlJiAJAPhhthiJmpT8ZgKCDb4TsP5odgYtizty\u002fKnFq8khBsL8ghn31t4bvv6pnJsVxX+y\u002fezXB2+ltwD\u002fpKNySkSH0P+68NkEpjuo\u002fzfXOZaXy8D\u002fkOHxh\u002fbbivzSjxjjwVtC\u002fO\u002ftL+yQ58L+yDgUqFjP6P9A2c2PXvde\u002f3avy+3J\u002f7L9DVMuHn773PyfTGkGeKuc\u002fJtsEI7Fp2r8wyDd8R1jtP8mc\u002fbgYT8C\u002f\u002fo\u002fp1Vzt0b+DJfrjYRXCP18IcTFK\u002fa4\u002fw7\u002fFQrz6\u002fT\u002fNAX\u002f8NJHmP9LjzIJUL\u002fI\u002fLWzNv9gi4T+6JYT+I6mzv2ukrWtzku0\u002fcJPxPuGK6b+USIIuS\u002fXevyCA8fGYm8c\u002ftE1AbAog6L\u002fUTuLxU+7zPx5hBAMCR\u002fW\u002fP2V\u002fcSQK2L8VpBBQXP\u002fav2tVrICX68A\u002fjWsdxmIL0D8gtqa78XX1P2B36VxkvdU\u002f8T+k2C6K4j8Oede3+kL5P9NpPrTqIfQ\u002fB+JTUoAx4T+YQxRiF3SnP9CAnCwA0bm\u002faVV18dB6l7\u002fI1kHeqmXfP3G1lBxoHeI\u002ft+Rqe+4vAUCTt8WB\u002f4PRvwvJlYNaf8I\u002ft+hATf2c8D+A+TAYT5TzP9lxlrQLlaa\u002fD0Mxsabq5L+4\u002fZQVSUHkP5iT6vTM28u\u002fKFNquaO3wD8e6EG6N7DcP5yWLF20S9U\u002fYJoIPmnG179EpT2dHTbsPxempftpmNw\u002f7vb2uEZn6T8G04bB8MbQPx4hhy6jHM2\u002fSPlkr5FG4j\u002fP587YronYv\u002fYXD2eJmQRAgPBzqpFEqT9q5UmnAOr0P24flrvCMeW\u002fViBJLAAp8D9Q1AAohJCtvyTdsp1R\u002fOY\u002fepASTrVT4b\u002ffePyxswXeP1Us2ylMVvk\u002fU84n\u002f08w1z+mG+JQB0zGv3T4\u002f\u002fC1t+w\u002fm\u002fhRpT6Z379Vce5phovsPwwxsSuuyck\u002fflc3QUNX7D8Dqe3n1ji1P9eobe0o\u002ffA\u002fjn2HRlVo4D+rmz1ll2YEQCvZOvvvKPk\u002fWnmR45ojzz9Y47JyVenwP8Skkvt8drw\u002fMmS\u002fgf1Z5b+OeTKCafXTPyUy3WPTcOa\u002fuX5LNwZV0D81h8UXmlWzP1h\u002fxT4KB98\u002fgxPj4OnO+z\u002fmusuNjxHhv1FYmOsQkfC\u002f21WU\u002f5Mq4r9RmbvXQDOxv\u002fre2Vr+mfk\u002fIJDAuMejfD+m5wkKJePWvxxn7\u002fCaaP8\u002f7ej5D7Xe+D966ftkhKG1P4GI9wFYq+I\u002fZ+9txIOV2z\u002ftoxGj1wvNv0Hji27vCbg\u002f0JIFHbVuyD97Os\u002fNVLPOP9R4zuFhEQpAKsdyMflHrT9jnPbYtfXqvzmXww1mZPI\u002fZXZzNXo+wr+QXSzoiz7tP9UZGGug++s\u002fRaK0HQog1j82FbdEZifOP9Z2VSXgxbU\u002f6NyoxMEU5D8Mf4tJmI\u002fJP4tbeDUVhvA\u002fM1niYo1vwT8Bi+t3JvnsP3cFjvqqUPI\u002fmpeIBq2R\u002fT8kCcvnBqzmP7RsPWR4Jv0\u002ftVnkvA8B0z8L8aRU69SfP9sfH0ih\u002fPQ\u002f7h+fx4pr5r+OZMOnIDbbP6BGrz5Gf\u002fA\u002f8offolkc47\u002fVGZzbMmX\u002fP6IUttNlzcW\u002fIKCYHEti8z\u002fNWPepDuviPx3R5ByaFNY\u002fa9iG\u002fLTeEkARop1GBHjLv+EBmkmD8+8\u002fdc\u002fkKqqE4z9jkun5\u002fVfQv8i8wPXc7Ok\u002fSDfFlFzgwj9Pj9Z\u002ftOPeP1ewlL6IjdO\u002feic046X2xL\u002fyCQYI+WbjP8hLZFlDF+o\u002fwWxEXHVLBkAiSO7LSun1Pw5WG3b53+a\u002ff4D2Fnju1T9jbKj0+qrXv+CzGQV53OY\u002f"},"type":"scatter"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05}}},"xaxis":{"title":{"text":"PC1"},"gridcolor":"#E7EEF0","zeroline":false},"yaxis":{"title":{"text":"PC2"},"gridcolor":"#E7EEF0","zeroline":false},"title":{"font":{"size":17},"text":"B\u1ea3n \u0111\u1ed3 ng\u01b0\u1eddi d\u00f9ng theo segment (PCA 2 chi\u1ec1u)","x":0.01},"font":{"family":"Segoe UI, Roboto, Helvetica, Arial, sans-serif","color":"#12303B","size":13},"margin":{"l":50,"r":20,"t":60,"b":50},"legend":{"orientation":"h","y":-0.2},"height":460,"paper_bgcolor":"white","plot_bgcolor":"white"},                        {"displaylogo": false, "responsive": true}                    )                };            </script>        </div></figure>
+<figure><div style="height:340px; width:100%;">                            <div id="3d9b6b25-35b9-4ff7-a49c-9d33733fc902" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("3d9b6b25-35b9-4ff7-a49c-9d33733fc902")) {                    Plotly.newPlot(                        "3d9b6b25-35b9-4ff7-a49c-9d33733fc902",                        [{"marker":{"color":["#0E7C86","#F2A541","#0E7C86","#0E7C86","#0E7C86","#0E7C86"]},"text":["0.429","0.473","0.422","0.421","0.416","0.418"],"textposition":"outside","x":["k=2","k=3","k=4","k=5","k=6","k=7"],"y":[0.42898154135588945,0.4734497801263243,0.4221369194949578,0.4206281428966739,0.41631961310981613,0.41750402684929894],"type":"bar"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05}}},"yaxis":{"range":[0,0.5681397361515892],"gridcolor":"#E7EEF0","zeroline":false},"title":{"font":{"size":17},"text":"Ch\u1ecdn s\u1ed1 c\u1ee5m k b\u1eb1ng silhouette (cao h\u01a1n = t\u00e1ch c\u1ee5m t\u1ed1t h\u01a1n)","x":0.01},"font":{"family":"Segoe UI, Roboto, Helvetica, Arial, sans-serif","color":"#12303B","size":13},"margin":{"l":50,"r":20,"t":60,"b":50},"legend":{"orientation":"h","y":-0.2},"height":340,"paper_bgcolor":"white","plot_bgcolor":"white","xaxis":{"gridcolor":"#E7EEF0","zeroline":false}},                        {"displaylogo": false, "responsive": true}                    )                };            </script>        </div></figure></div>
+<div class="tw"><table class="dataframe t">
+  <thead>
+    <tr style="text-align: right;">
+      <th>segment</th>
+      <th>users</th>
+      <th>recency_days</th>
+      <th>active_days</th>
+      <th>views</th>
+      <th>purchases</th>
+      <th>share_%</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Đã rời bỏ / ngủ đông (churned)</td>
+      <td>737</td>
+      <td>20.23</td>
+      <td>8.18</td>
+      <td>26.62</td>
+      <td>0.64</td>
+      <td>49.4</td>
+    </tr>
+    <tr>
+      <td>Người dùng thỉnh thoảng (casual)</td>
+      <td>520</td>
+      <td>1.86</td>
+      <td>28.54</td>
+      <td>119.82</td>
+      <td>1.28</td>
+      <td>34.8</td>
+    </tr>
+    <tr>
+      <td>Khách trung thành mua nhiều (power buyer)</td>
+      <td>236</td>
+      <td>1.39</td>
+      <td>39.05</td>
+      <td>166.01</td>
+      <td>23.61</td>
+      <td>15.8</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<h3>2 · Journey analysis</h3>
+<div class="two"><figure><div style="height:400px; width:100%;">                            <div id="13625509-1a72-4f1f-928f-0db58cbc82cf" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("13625509-1a72-4f1f-928f-0db58cbc82cf")) {                    Plotly.newPlot(                        "13625509-1a72-4f1f-928f-0db58cbc82cf",                        [{"marker":{"color":["#0E7C86","#2A93A0","#56ABB4","#F2A541","#C8553D"]},"textinfo":"value+percent previous","x":{"dtype":"i4","bdata":"GqwAAOeaAADjLQAACiAAAAIaAAA="},"y":["app_open","view_product","add_to_cart","checkout_start","purchase"],"type":"funnel"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05}}},"title":{"font":{"size":17},"text":"Funnel theo session (s\u1ed1 session, % so v\u1edbi b\u01b0\u1edbc tr\u01b0\u1edbc)","x":0.01},"font":{"family":"Segoe UI, Roboto, Helvetica, Arial, sans-serif","color":"#12303B","size":13},"margin":{"l":50,"r":20,"t":60,"b":50},"legend":{"orientation":"h","y":-0.2},"height":400,"paper_bgcolor":"white","plot_bgcolor":"white","xaxis":{"gridcolor":"#E7EEF0","zeroline":false},"yaxis":{"gridcolor":"#E7EEF0","zeroline":false}},                        {"displaylogo": false, "responsive": true}                    )                };            </script>        </div></figure>
+<figure><div style="height:340px; width:100%;">                            <div id="94280a06-e0c4-44f5-9161-b333ba8a2e59" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("94280a06-e0c4-44f5-9161-b333ba8a2e59")) {                    Plotly.newPlot(                        "94280a06-e0c4-44f5-9161-b333ba8a2e59",                        [{"colorbar":{"title":{"text":"%"}},"colorscale":[[0,"#E6F2F3"],[1,"#0E7C86"]],"text":{"dtype":"f8","bdata":"zczMzMzMV0CamZmZmZlKQM3MzMzMzEZAzczMzMyMREAAAAAAAGBXQJqZmZmZmSxAmpmZmZmZF0AAAAAAAAAIQJqZmZmZWVJAZmZmZmbmMEDNzMzMzMwhQJqZmZmZmRVA","shape":"3, 4"},"texttemplate":"%{text:.1f}%","x":["view_product","add_to_cart","checkout_start","purchase"],"y":["Kh\u00e1ch trung th\u00e0nh mua nhi\u1ec1u (power buyer)","Ng\u01b0\u1eddi d\u00f9ng th\u1ec9nh tho\u1ea3ng (casual)","\u0110\u00e3 r\u1eddi b\u1ecf \u002f ng\u1ee7 \u0111\u00f4ng (churned)"],"z":{"dtype":"f8","bdata":"zczMzMzMV0CamZmZmZlKQM3MzMzMzEZAzczMzMyMREAAAAAAAGBXQJqZmZmZmSxAmpmZmZmZF0AAAAAAAAAIQJqZmZmZWVJAZmZmZmbmMEDNzMzMzMwhQJqZmZmZmRVA","shape":"3, 4"},"type":"heatmap"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05}}},"title":{"font":{"size":17},"text":"% session \u0111\u1ea1t t\u1eebng b\u01b0\u1edbc, theo segment (t\u00ednh t\u1eeb app_open)","x":0.01},"font":{"family":"Segoe UI, Roboto, Helvetica, Arial, sans-serif","color":"#12303B","size":13},"margin":{"l":50,"r":20,"t":60,"b":50},"legend":{"orientation":"h","y":-0.2},"height":340,"paper_bgcolor":"white","plot_bgcolor":"white","xaxis":{"gridcolor":"#E7EEF0","zeroline":false},"yaxis":{"gridcolor":"#E7EEF0","zeroline":false}},                        {"displaylogo": false, "responsive": true}                    )                };            </script>        </div></figure></div>
+<figure><div style="height:480px; width:100%;">                            <div id="ca970595-902f-42f6-b345-639f9c2b6bf1" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("ca970595-902f-42f6-b345-639f9c2b6bf1")) {                    Plotly.newPlot(                        "ca970595-902f-42f6-b345-639f9c2b6bf1",                        [{"link":{"color":"rgba(14,124,134,0.25)","source":[0,3,3,7,14,14,20,0,3,8,3,5,12,19,14,16,7,12,5,5,13,7,10,7,3,6,14,21,14,6,10,5,0,2,22,12,18,7,11,10],"target":[3,4,7,14,15,20,23,1,8,9,5,12,19,23,16,23,9,15,9,13,15,10,18,13,6,9,21,23,17,14,15,11,2,4,23,21,23,11,22,21],"value":[17944,6334,8291,5868,2509,2216,635,1958,330,325,2818,1991,1627,1284,1118,322,1582,334,755,43,124,709,494,87,171,16,127,156,51,152,191,26,98,97,35,17,76,45,70,18]},"node":{"color":["#0E7C86","#C8553D","#0E7C86","#0E7C86","#C8553D","#0E7C86","#0E7C86","#0E7C86","#0E7C86","#C8553D","#0E7C86","#0E7C86","#0E7C86","#0E7C86","#0E7C86","#C8553D","#0E7C86","#0E7C86","#0E7C86","#0E7C86","#0E7C86","#0E7C86","#0E7C86","#C8553D"],"label":["app_open","R\u1eddi \u0111i","share","view_product","R\u1eddi \u0111i","add_to_cart","app_open","search","share","R\u1eddi \u0111i","add_to_cart","app_open","checkout_start","share","view_product","R\u1eddi \u0111i","add_to_cart","app_open","checkout_start","purchase","search","share","view_product","R\u1eddi \u0111i"],"pad":14,"thickness":16},"type":"sankey"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05}}},"title":{"font":{"size":17},"text":"H\u00e0nh tr\u00ecnh ng\u01b0\u1eddi d\u00f9ng trong session (5 b\u01b0\u1edbc \u0111\u1ea7u)","x":0.01},"font":{"family":"Segoe UI, Roboto, Helvetica, Arial, sans-serif","color":"#12303B","size":13},"margin":{"l":50,"r":20,"t":60,"b":50},"legend":{"orientation":"h","y":-0.2},"height":480,"paper_bgcolor":"white","plot_bgcolor":"white","xaxis":{"gridcolor":"#E7EEF0","zeroline":false},"yaxis":{"gridcolor":"#E7EEF0","zeroline":false}},                        {"displaylogo": false, "responsive": true}                    )                };            </script>        </div></figure>
+<figure><div style="height:460px; width:100%;">                            <div id="1f615f18-b1b4-41b3-8a37-53646941758d" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("1f615f18-b1b4-41b3-8a37-53646941758d")) {                    Plotly.newPlot(                        "1f615f18-b1b4-41b3-8a37-53646941758d",                        [{"colorbar":{"title":{"text":"P"}},"colorscale":[[0,"white"],[1,"#F2A541"]],"text":{"dtype":"f8","bdata":"QmDl0CLb0T8AAAAAAAAAAPyp8dJNYoA\u002fEoPAyqFF5j8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8qfHSTWKQP\u002fyp8dJNYmA\u002fUrgehetRuD8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8qfHSTWJwP83MzMzMzOw\u002fukkMAiuHxj8AAAAAAAAAAPyp8dJNYnA\u002fAAAAAAAAAADsUbgehevpPwAAAAAAAAAAAAAAAAAAAAD8qfHSTWKAP\u002fyp8dJNYlA\u002fnu+nxks36T8AAAAAAAAAAHnpJjEIrIw\u002fAAAAAAAAAAAAAAAAAAAAAIcW2c73U8M\u002fAAAAAAAAAAAK16NwPQqnP\u002fyp8dJNYmA\u002fPzVeukkM7j8AAAAAAAAAAHsUrkfhepQ\u002fAAAAAAAAAAD8qfHSTWJQPwAAAAAAAAAAAAAAAAAAAADLoUW28\u002f2kPwAAAAAAAAAALbKd76fGyz\u002fy0k1iEFi5P\u002fp+arx0k3g\u002fAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA5tMh2vp+KP0jhehSuR+U\u002f30+Nl24S7z8AAAAAAAAAAPp+arx0k5g\u002fAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\u002fKnx0k1iUD8AAAAAAAAAAPp+arx0k2g\u002fVOOlm8Qg2D9zaJHtfD\u002fFPzvfT42XboI\u002fAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMQisHFpk2z\u002fb+X5qvHSTPwAAAAAAAAAA","shape":"8, 9"},"texttemplate":"%{text:.2f}","x":["\u003cEND\u003e","add_to_cart","app_open","checkout_start","purchase","review","search","share","view_product"],"y":["add_to_cart","app_open","checkout_start","purchase","review","search","share","view_product"],"z":{"dtype":"f8","bdata":"QmDl0CLb0T8AAAAAAAAAAPyp8dJNYoA\u002fEoPAyqFF5j8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8qfHSTWKQP\u002fyp8dJNYmA\u002fUrgehetRuD8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8qfHSTWJwP83MzMzMzOw\u002fukkMAiuHxj8AAAAAAAAAAPyp8dJNYnA\u002fAAAAAAAAAADsUbgehevpPwAAAAAAAAAAAAAAAAAAAAD8qfHSTWKAP\u002fyp8dJNYlA\u002fnu+nxks36T8AAAAAAAAAAHnpJjEIrIw\u002fAAAAAAAAAAAAAAAAAAAAAIcW2c73U8M\u002fAAAAAAAAAAAK16NwPQqnP\u002fyp8dJNYmA\u002fPzVeukkM7j8AAAAAAAAAAHsUrkfhepQ\u002fAAAAAAAAAAD8qfHSTWJQPwAAAAAAAAAAAAAAAAAAAADLoUW28\u002f2kPwAAAAAAAAAALbKd76fGyz\u002fy0k1iEFi5P\u002fp+arx0k3g\u002fAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA5tMh2vp+KP0jhehSuR+U\u002f30+Nl24S7z8AAAAAAAAAAPp+arx0k5g\u002fAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\u002fKnx0k1iUD8AAAAAAAAAAPp+arx0k2g\u002fVOOlm8Qg2D9zaJHtfD\u002fFPzvfT42XboI\u002fAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMQisHFpk2z\u002fb+X5qvHSTPwAAAAAAAAAA","shape":"8, 9"},"type":"heatmap"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05}}},"yaxis":{"autorange":"reversed","title":{"text":"T\u1eeb event"},"gridcolor":"#E7EEF0","zeroline":false},"xaxis":{"title":{"text":"Sang event"},"gridcolor":"#E7EEF0","zeroline":false},"title":{"font":{"size":17},"text":"Ma tr\u1eadn chuy\u1ec3n b\u01b0\u1edbc (x\u00e1c su\u1ea5t event A \u2192 event B)","x":0.01},"font":{"family":"Segoe UI, Roboto, Helvetica, Arial, sans-serif","color":"#12303B","size":13},"margin":{"l":50,"r":20,"t":60,"b":50},"legend":{"orientation":"h","y":-0.2},"height":460,"paper_bgcolor":"white","plot_bgcolor":"white"},                        {"displaylogo": false, "responsive": true}                    )                };            </script>        </div></figure>
+<h3>Top đường đi phổ biến</h3><div class="tw"><table class="dataframe t">
+  <thead>
+    <tr style="text-align: right;">
+      <th>path</th>
+      <th>sessions</th>
+      <th>share_%</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>app_open → view_product</td>
+      <td>14114</td>
+      <td>32.0</td>
+    </tr>
+    <tr>
+      <td>app_open → view_product → search → view_product</td>
+      <td>5449</td>
+      <td>12.4</td>
+    </tr>
+    <tr>
+      <td>app_open</td>
+      <td>4213</td>
+      <td>9.6</td>
+    </tr>
+    <tr>
+      <td>app_open → view_product → search</td>
+      <td>3432</td>
+      <td>7.8</td>
+    </tr>
+    <tr>
+      <td>app_open → view_product → add_to_cart → checkout_start → purchase</td>
+      <td>2790</td>
+      <td>6.3</td>
+    </tr>
+    <tr>
+      <td>app_open → view_product → add_to_cart</td>
+      <td>1737</td>
+      <td>3.9</td>
+    </tr>
+    <tr>
+      <td>app_open → view_product → search → view_product → search</td>
+      <td>1400</td>
+      <td>3.2</td>
+    </tr>
+    <tr>
+      <td>app_open → view_product → search → view_product → search → view_product</td>
+      <td>1179</td>
+      <td>2.7</td>
+    </tr>
+    <tr>
+      <td>app_open → view_product → search → view_product → add_to_cart → checkout_start → purchase</td>
+      <td>1044</td>
+      <td>2.4</td>
+    </tr>
+    <tr>
+      <td>app_open → view_product → add_to_cart → checkout_start</td>
+      <td>754</td>
+      <td>1.7</td>
+    </tr>
+  </tbody>
+</table></div>
+</div></section>
+
+<section id="canh-bao"><div class="wrap">
+<h2>Cảnh báo engagement giảm bất thường</h2>
+<p class="lead">Ở mức toàn hệ thống DAU chỉ giảm khoảng một phần tư, nhưng khi chia theo nền tảng thì Android giảm hơn một nửa. Cảnh báo theo phạm vi giúp thấy đúng nguồn gốc sự cố.</p>
+<figure><div style="height:440px; width:100%;">                            <div id="86c4d770-ea94-4748-9ff6-0a3bae94da7f" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("86c4d770-ea94-4748-9ff6-0a3bae94da7f")) {                    Plotly.newPlot(                        "86c4d770-ea94-4748-9ff6-0a3bae94da7f",                        [{"line":{"color":"#0E7C86","width":2.2},"mode":"lines","name":"android","x":["2026-08-01T00:00:00.000000","2026-08-02T00:00:00.000000","2026-08-03T00:00:00.000000","2026-08-04T00:00:00.000000","2026-08-05T00:00:00.000000","2026-08-06T00:00:00.000000","2026-08-07T00:00:00.000000","2026-08-08T00:00:00.000000","2026-08-09T00:00:00.000000","2026-08-10T00:00:00.000000","2026-08-11T00:00:00.000000","2026-08-12T00:00:00.000000","2026-08-13T00:00:00.000000","2026-08-14T00:00:00.000000","2026-08-15T00:00:00.000000","2026-08-16T00:00:00.000000","2026-08-17T00:00:00.000000","2026-08-18T00:00:00.000000","2026-08-19T00:00:00.000000","2026-08-20T00:00:00.000000","2026-08-21T00:00:00.000000","2026-08-22T00:00:00.000000","2026-08-23T00:00:00.000000","2026-08-24T00:00:00.000000","2026-08-25T00:00:00.000000","2026-08-26T00:00:00.000000","2026-08-27T00:00:00.000000","2026-08-28T00:00:00.000000","2026-08-29T00:00:00.000000","2026-08-30T00:00:00.000000","2026-08-31T00:00:00.000000","2026-09-01T00:00:00.000000","2026-09-02T00:00:00.000000","2026-09-03T00:00:00.000000","2026-09-04T00:00:00.000000","2026-09-05T00:00:00.000000","2026-09-06T00:00:00.000000","2026-09-07T00:00:00.000000","2026-09-08T00:00:00.000000","2026-09-09T00:00:00.000000","2026-09-10T00:00:00.000000","2026-09-11T00:00:00.000000","2026-09-12T00:00:00.000000","2026-09-13T00:00:00.000000","2026-09-14T00:00:00.000000","2026-09-15T00:00:00.000000","2026-09-16T00:00:00.000000","2026-09-17T00:00:00.000000","2026-09-18T00:00:00.000000","2026-09-19T00:00:00.000000","2026-09-20T00:00:00.000000","2026-09-21T00:00:00.000000","2026-09-22T00:00:00.000000","2026-09-23T00:00:00.000000","2026-09-24T00:00:00.000000","2026-09-25T00:00:00.000000","2026-09-26T00:00:00.000000","2026-09-27T00:00:00.000000","2026-09-28T00:00:00.000000","2026-09-29T00:00:00.000000"],"y":{"dtype":"i2","bdata":"GwAzAD4AUQBkAIIAoADaAPAAzwDhAPUABQFCAYwBjwE2ASwBMgEkAS0BdgFSAQEBIQEGARUB\u002fwBKAT0BFQH0AAYBAwH8ADIBOAEBAfAA+QD1APcARQFTAe8A7AAJAQMB6wA2AUQBCAFuAHoAagBzAJIAhABpAGUA"},"type":"scatter"},{"line":{"color":"#F2A541","width":2.2},"mode":"lines","name":"ios","x":["2026-08-01T00:00:00.000000","2026-08-02T00:00:00.000000","2026-08-03T00:00:00.000000","2026-08-04T00:00:00.000000","2026-08-05T00:00:00.000000","2026-08-06T00:00:00.000000","2026-08-07T00:00:00.000000","2026-08-08T00:00:00.000000","2026-08-09T00:00:00.000000","2026-08-10T00:00:00.000000","2026-08-11T00:00:00.000000","2026-08-12T00:00:00.000000","2026-08-13T00:00:00.000000","2026-08-14T00:00:00.000000","2026-08-15T00:00:00.000000","2026-08-16T00:00:00.000000","2026-08-17T00:00:00.000000","2026-08-18T00:00:00.000000","2026-08-19T00:00:00.000000","2026-08-20T00:00:00.000000","2026-08-21T00:00:00.000000","2026-08-22T00:00:00.000000","2026-08-23T00:00:00.000000","2026-08-24T00:00:00.000000","2026-08-25T00:00:00.000000","2026-08-26T00:00:00.000000","2026-08-27T00:00:00.000000","2026-08-28T00:00:00.000000","2026-08-29T00:00:00.000000","2026-08-30T00:00:00.000000","2026-08-31T00:00:00.000000","2026-09-01T00:00:00.000000","2026-09-02T00:00:00.000000","2026-09-03T00:00:00.000000","2026-09-04T00:00:00.000000","2026-09-05T00:00:00.000000","2026-09-06T00:00:00.000000","2026-09-07T00:00:00.000000","2026-09-08T00:00:00.000000","2026-09-09T00:00:00.000000","2026-09-10T00:00:00.000000","2026-09-11T00:00:00.000000","2026-09-12T00:00:00.000000","2026-09-13T00:00:00.000000","2026-09-14T00:00:00.000000","2026-09-15T00:00:00.000000","2026-09-16T00:00:00.000000","2026-09-17T00:00:00.000000","2026-09-18T00:00:00.000000","2026-09-19T00:00:00.000000","2026-09-20T00:00:00.000000","2026-09-21T00:00:00.000000","2026-09-22T00:00:00.000000","2026-09-23T00:00:00.000000","2026-09-24T00:00:00.000000","2026-09-25T00:00:00.000000","2026-09-26T00:00:00.000000","2026-09-27T00:00:00.000000","2026-09-28T00:00:00.000000","2026-09-29T00:00:00.000000"],"y":{"dtype":"i2","bdata":"DwAbACcAOgBMAEcAYwCHAI4AlgCRAKEAtQDJAP0ABwHOAMoAvADSAMYA+ADgALAAsAC5AJwArgDWAMcApACVAKAArwClANYA0QChAJoArQCaAKEAzADKAJ8AoACuAJgAqQDJAMUAlACfAKIApQCoANIAwwCnAKsA"},"type":"scatter"},{"line":{"color":"#C8553D","width":2.2},"mode":"lines","name":"web","x":["2026-08-01T00:00:00.000000","2026-08-02T00:00:00.000000","2026-08-03T00:00:00.000000","2026-08-04T00:00:00.000000","2026-08-05T00:00:00.000000","2026-08-06T00:00:00.000000","2026-08-07T00:00:00.000000","2026-08-08T00:00:00.000000","2026-08-09T00:00:00.000000","2026-08-10T00:00:00.000000","2026-08-11T00:00:00.000000","2026-08-12T00:00:00.000000","2026-08-13T00:00:00.000000","2026-08-14T00:00:00.000000","2026-08-15T00:00:00.000000","2026-08-16T00:00:00.000000","2026-08-17T00:00:00.000000","2026-08-18T00:00:00.000000","2026-08-19T00:00:00.000000","2026-08-20T00:00:00.000000","2026-08-21T00:00:00.000000","2026-08-22T00:00:00.000000","2026-08-23T00:00:00.000000","2026-08-24T00:00:00.000000","2026-08-25T00:00:00.000000","2026-08-26T00:00:00.000000","2026-08-27T00:00:00.000000","2026-08-28T00:00:00.000000","2026-08-29T00:00:00.000000","2026-08-30T00:00:00.000000","2026-08-31T00:00:00.000000","2026-09-01T00:00:00.000000","2026-09-02T00:00:00.000000","2026-09-03T00:00:00.000000","2026-09-04T00:00:00.000000","2026-09-05T00:00:00.000000","2026-09-06T00:00:00.000000","2026-09-07T00:00:00.000000","2026-09-08T00:00:00.000000","2026-09-09T00:00:00.000000","2026-09-10T00:00:00.000000","2026-09-11T00:00:00.000000","2026-09-12T00:00:00.000000","2026-09-13T00:00:00.000000","2026-09-14T00:00:00.000000","2026-09-15T00:00:00.000000","2026-09-16T00:00:00.000000","2026-09-17T00:00:00.000000","2026-09-18T00:00:00.000000","2026-09-19T00:00:00.000000","2026-09-20T00:00:00.000000","2026-09-21T00:00:00.000000","2026-09-22T00:00:00.000000","2026-09-23T00:00:00.000000","2026-09-24T00:00:00.000000","2026-09-25T00:00:00.000000","2026-09-26T00:00:00.000000","2026-09-27T00:00:00.000000","2026-09-28T00:00:00.000000","2026-09-29T00:00:00.000000"],"y":{"dtype":"i2","bdata":"CgALABsAIAAkACUANwBIAGEAUwBUAGkAdABzAKcAnAB7AHQAewB3AHoAfgCOAGoAZwB5AGoAYABuAHEAZABPAFwAXABaAIEAewBiAF4AXwBgAGAAfAByAF8AXwBbAF4AZACHAHwAVwBiAFkAZgBmAH4AeABkAFcA"},"type":"scatter"},{"hovertemplate":"\u003cb\u003eCRITICAL\u003c\u002fb\u003e\u003cbr\u003eplatform=android\u003cbr\u003e2026-09-22\u003cbr\u003eDAU 110 vs baseline 242\u003cbr\u003egi\u1ea3m 54.5% (z=-10.9)\u003cextra\u003e\u003c\u002fextra\u003e","marker":{"color":"#C8553D","line":{"color":"white","width":1},"size":13,"symbol":"x"},"mode":"markers","showlegend":false,"x":["2026-09-22T00:00:00"],"y":[110.0],"type":"scatter"},{"hovertemplate":"\u003cb\u003eCRITICAL\u003c\u002fb\u003e\u003cbr\u003eplatform=android\u003cbr\u003e2026-09-26\u003cbr\u003eDAU 146 vs baseline 318\u003cbr\u003egi\u1ea3m 54.0% (z=-10.8)\u003cextra\u003e\u003c\u002fextra\u003e","marker":{"color":"#C8553D","line":{"color":"white","width":1},"size":13,"symbol":"x"},"mode":"markers","showlegend":false,"x":["2026-09-26T00:00:00"],"y":[146.0],"type":"scatter"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05}}},"yaxis":{"title":{"text":"DAU"},"gridcolor":"#E7EEF0","zeroline":false},"title":{"font":{"size":17},"text":"DAU theo n\u1ec1n t\u1ea3ng - d\u1ea5u \u2715 \u0111\u1ecf l\u00e0 c\u1ea3nh b\u00e1o","x":0.01},"font":{"family":"Segoe UI, Roboto, Helvetica, Arial, sans-serif","color":"#12303B","size":13},"margin":{"l":50,"r":20,"t":60,"b":50},"legend":{"orientation":"h","y":-0.2},"height":440,"paper_bgcolor":"white","plot_bgcolor":"white","xaxis":{"gridcolor":"#E7EEF0","zeroline":false}},                        {"displaylogo": false, "responsive": true}                    )                };            </script>        </div></figure>
+<figure><div style="height:380px; width:100%;">                            <div id="9d6860dc-8b1e-40e7-a7ef-8167488f98e6" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("9d6860dc-8b1e-40e7-a7ef-8167488f98e6")) {                    Plotly.newPlot(                        "9d6860dc-8b1e-40e7-a7ef-8167488f98e6",                        [{"line":{"color":"#0E7C86","width":2.4},"name":"DAU th\u1ef1c t\u1ebf","x":["2026-08-01T00:00:00.000000","2026-08-02T00:00:00.000000","2026-08-03T00:00:00.000000","2026-08-04T00:00:00.000000","2026-08-05T00:00:00.000000","2026-08-06T00:00:00.000000","2026-08-07T00:00:00.000000","2026-08-08T00:00:00.000000","2026-08-09T00:00:00.000000","2026-08-10T00:00:00.000000","2026-08-11T00:00:00.000000","2026-08-12T00:00:00.000000","2026-08-13T00:00:00.000000","2026-08-14T00:00:00.000000","2026-08-15T00:00:00.000000","2026-08-16T00:00:00.000000","2026-08-17T00:00:00.000000","2026-08-18T00:00:00.000000","2026-08-19T00:00:00.000000","2026-08-20T00:00:00.000000","2026-08-21T00:00:00.000000","2026-08-22T00:00:00.000000","2026-08-23T00:00:00.000000","2026-08-24T00:00:00.000000","2026-08-25T00:00:00.000000","2026-08-26T00:00:00.000000","2026-08-27T00:00:00.000000","2026-08-28T00:00:00.000000","2026-08-29T00:00:00.000000","2026-08-30T00:00:00.000000","2026-08-31T00:00:00.000000","2026-09-01T00:00:00.000000","2026-09-02T00:00:00.000000","2026-09-03T00:00:00.000000","2026-09-04T00:00:00.000000","2026-09-05T00:00:00.000000","2026-09-06T00:00:00.000000","2026-09-07T00:00:00.000000","2026-09-08T00:00:00.000000","2026-09-09T00:00:00.000000","2026-09-10T00:00:00.000000","2026-09-11T00:00:00.000000","2026-09-12T00:00:00.000000","2026-09-13T00:00:00.000000","2026-09-14T00:00:00.000000","2026-09-15T00:00:00.000000","2026-09-16T00:00:00.000000","2026-09-17T00:00:00.000000","2026-09-18T00:00:00.000000","2026-09-19T00:00:00.000000","2026-09-20T00:00:00.000000","2026-09-21T00:00:00.000000","2026-09-22T00:00:00.000000","2026-09-23T00:00:00.000000","2026-09-24T00:00:00.000000","2026-09-25T00:00:00.000000","2026-09-26T00:00:00.000000","2026-09-27T00:00:00.000000","2026-09-28T00:00:00.000000","2026-09-29T00:00:00.000000"],"y":{"dtype":"i2","bdata":"NABZAIAAqwDUAO4AOgGpAd8BuAHGAf8BLgJ+AjADMgN\u002fAmoCaQJtAm0C7ALAAhsCOAI4AhsCDQKOAnUCHQLYAQICDgL7AYkChAIEAugBBQLvAfgBjQKPAu0B6wESAvkB+AGGAoUC8wFvAXUBdQGBAeIBvwF0AWcB"},"type":"scatter"},{"line":{"color":"#F2A541","dash":"dash","width":2},"name":"Baseline (trung v\u1ecb c\u00f9ng th\u1ee9)","x":["2026-08-01T00:00:00.000000","2026-08-02T00:00:00.000000","2026-08-03T00:00:00.000000","2026-08-04T00:00:00.000000","2026-08-05T00:00:00.000000","2026-08-06T00:00:00.000000","2026-08-07T00:00:00.000000","2026-08-08T00:00:00.000000","2026-08-09T00:00:00.000000","2026-08-10T00:00:00.000000","2026-08-11T00:00:00.000000","2026-08-12T00:00:00.000000","2026-08-13T00:00:00.000000","2026-08-14T00:00:00.000000","2026-08-15T00:00:00.000000","2026-08-16T00:00:00.000000","2026-08-17T00:00:00.000000","2026-08-18T00:00:00.000000","2026-08-19T00:00:00.000000","2026-08-20T00:00:00.000000","2026-08-21T00:00:00.000000","2026-08-22T00:00:00.000000","2026-08-23T00:00:00.000000","2026-08-24T00:00:00.000000","2026-08-25T00:00:00.000000","2026-08-26T00:00:00.000000","2026-08-27T00:00:00.000000","2026-08-28T00:00:00.000000","2026-08-29T00:00:00.000000","2026-08-30T00:00:00.000000","2026-08-31T00:00:00.000000","2026-09-01T00:00:00.000000","2026-09-02T00:00:00.000000","2026-09-03T00:00:00.000000","2026-09-04T00:00:00.000000","2026-09-05T00:00:00.000000","2026-09-06T00:00:00.000000","2026-09-07T00:00:00.000000","2026-09-08T00:00:00.000000","2026-09-09T00:00:00.000000","2026-09-10T00:00:00.000000","2026-09-11T00:00:00.000000","2026-09-12T00:00:00.000000","2026-09-13T00:00:00.000000","2026-09-14T00:00:00.000000","2026-09-15T00:00:00.000000","2026-09-16T00:00:00.000000","2026-09-17T00:00:00.000000","2026-09-18T00:00:00.000000","2026-09-19T00:00:00.000000","2026-09-20T00:00:00.000000","2026-09-21T00:00:00.000000","2026-09-22T00:00:00.000000","2026-09-23T00:00:00.000000","2026-09-24T00:00:00.000000","2026-09-25T00:00:00.000000","2026-09-26T00:00:00.000000","2026-09-27T00:00:00.000000","2026-09-28T00:00:00.000000","2026-09-29T00:00:00.000000"],"y":{"dtype":"f8","bdata":"AAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh\u002fAAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh\u002fAAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh\u002fAAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh\u002fAAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh\u002fAAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh\u002fAAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh\u002fAAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh\u002fAAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh\u002fAAAAAAAA+H8AAAAAAFSCQAAAAAAAfIJAAAAAAACYfkAAAAAAAPB\u002fQAAAAAAA3IBAAAAAAAAkgUAAAAAAAOiBQAAAAAAA6IVAAAAAAADUhEAAAAAAAOCAQAAAAAAAQIBAAAAAAADogEAAAAAAACSBQAAAAAAA6IFAAAAAAADohUAAAAAAABCFQAAAAAAA4IBAAAAAAACAgEAAAAAAAPSAQAAAAAAApIBAAAAAAAAggEAAAAAAAGyEQAAAAAAATIRAAAAAAAB8gEAAAAAAAJh+QAAAAAAAXIBAAAAAAAAcgEAAAAAAAJh\u002fQAAAAAAAWIRAAAAAAAAkhEAAAAAAALh\u002fQAAAAAAAAH5A"},"type":"scatter"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05}}},"title":{"font":{"size":17},"text":"DAU to\u00e0n h\u1ec7 th\u1ed1ng so v\u1edbi baseline c\u00f9ng th\u1ee9","x":0.01},"font":{"family":"Segoe UI, Roboto, Helvetica, Arial, sans-serif","color":"#12303B","size":13},"margin":{"l":50,"r":20,"t":60,"b":50},"legend":{"orientation":"h","y":-0.2},"height":380,"paper_bgcolor":"white","plot_bgcolor":"white","xaxis":{"gridcolor":"#E7EEF0","zeroline":false},"yaxis":{"gridcolor":"#E7EEF0","zeroline":false}},                        {"displaylogo": false, "responsive": true}                    )                };            </script>        </div></figure>
+<div class="tw"><table class="dataframe t">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Ngày</th>
+      <th>Mức</th>
+      <th>Metric</th>
+      <th>Phạm vi</th>
+      <th>Thực tế</th>
+      <th>Baseline</th>
+      <th>Giảm</th>
+      <th>z</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2026-09-22</td>
+      <td><span class="sev-CRITICAL">CRITICAL</span></td>
+      <td>dau</td>
+      <td>platform=android</td>
+      <td>110</td>
+      <td>242</td>
+      <td>54.5%</td>
+      <td>-10.9</td>
+    </tr>
+    <tr>
+      <td>2026-09-22</td>
+      <td><span class="sev-WARNING">WARNING</span></td>
+      <td>dau</td>
+      <td>toàn hệ thống</td>
+      <td>367</td>
+      <td>489</td>
+      <td>25.0%</td>
+      <td>-5.0</td>
+    </tr>
+    <tr>
+      <td>2026-09-22</td>
+      <td><span class="sev-WARNING">WARNING</span></td>
+      <td>events</td>
+      <td>toàn hệ thống</td>
+      <td>2673</td>
+      <td>3599</td>
+      <td>25.7%</td>
+      <td>-4.1</td>
+    </tr>
+    <tr>
+      <td>2026-09-26</td>
+      <td><span class="sev-CRITICAL">CRITICAL</span></td>
+      <td>dau</td>
+      <td>platform=android</td>
+      <td>146</td>
+      <td>317</td>
+      <td>54.0%</td>
+      <td>-10.8</td>
+    </tr>
+    <tr>
+      <td>2026-09-26</td>
+      <td><span class="sev-WARNING">WARNING</span></td>
+      <td>dau</td>
+      <td>toàn hệ thống</td>
+      <td>482</td>
+      <td>651</td>
+      <td>26.0%</td>
+      <td>-5.2</td>
+    </tr>
+    <tr>
+      <td>2026-09-26</td>
+      <td><span class="sev-WARNING">WARNING</span></td>
+      <td>events</td>
+      <td>toàn hệ thống</td>
+      <td>3541</td>
+      <td>4915</td>
+      <td>28.0%</td>
+      <td>-5.6</td>
+    </tr>
+  </tbody>
+</table></div>
+</div></section>
+
+<section id="ai"><div class="wrap">
+<h2>AI tóm tắt</h2>
+<p class="lead">AI chỉ nhận JSON số liệu đã tính sẵn và chỉ được diễn giải, không tự tính hay bịa số. Bản dưới đây là chế độ template offline; đặt <code class="i">ANTHROPIC_API_KEY</code> để gọi Claude thật.</p>
+<pre>[Bản tóm tắt offline - theo template, không gọi LLM]
+
+Phân nhóm: Đã rời bỏ / ngủ đông (churned) chiếm 49.4%; Người dùng thỉnh thoảng (casual) chiếm 34.8%; Khách trung thành mua nhiều (power buyer) chiếm 15.8%.
+Điểm nghẽn lớn nhất của funnel: bước &quot;add_to_cart&quot; (mất 70.4% so với bước trước).
+Cảnh báo gần nhất: WARNING - events (toàn hệ thống) giảm 28.0% vào 2026-09-26.
+
+Giả thuyết gợi ý:
+  H1. Tối ưu nút thêm vào giỏ &amp; thông tin sản phẩm để tăng chuyển đổi view -&gt; cart.
+  H2. Gửi ưu đãi/nhắc giỏ hàng cho nhóm có tỉ lệ view -&gt; cart thấp (segment lớn nhất).
+  H3. Điều tra bản phát hành/lỗi ở nền tảng đang có cảnh báo giảm.
+Brief A/B: đối tượng = segment đông nhất; biến = banner ưu đãi lần đầu; chỉ số chính = view-&gt;cart rate.</pre>
+</div></section>
+
+<section id="ma-nguon"><div class="wrap">
+<h2>Mã nguồn</h2>
+<p class="lead">Mỗi file một nhiệm vụ. Bấm để xem toàn bộ nội dung.</p>
+<details><summary><code class="i">config.py</code> — Cấu hình + event schema</summary><pre>&quot;&quot;&quot;Cấu hình chung cho toàn bộ pipeline.&quot;&quot;&quot;
+from pathlib import Path
+
+BASE_DIR = Path(__file__).parent
+OUTPUT_DIR = BASE_DIR / &quot;output&quot;
+OUTPUT_DIR.mkdir(exist_ok=True)
+ASSETS_DIR = BASE_DIR / &quot;docs&quot; / &quot;assets&quot;   # sơ đồ + file tĩnh cho web
+ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+
+SEED = 42
+N_USERS = 1500
+START_DATE = &quot;2026-08-01&quot;
+N_DAYS = 60                 # 60 ngày dữ liệu
+DROP_START_DAY = 52         # từ ngày này engagement bị giảm bất thường (giả lập sự cố)
+DROP_RATIO = 0.55           # giảm ~55% hoạt động của nhóm Android
+
+# Event schema (đây cũng là &quot;SDK/event schema mẫu&quot; của đề tài)
+EVENT_SCHEMA = {
+    &quot;required&quot;: [&quot;event_id&quot;, &quot;user_id&quot;, &quot;event_name&quot;, &quot;timestamp&quot;, &quot;platform&quot;],
+    &quot;allowed_events&quot;: [
+        &quot;app_open&quot;, &quot;view_product&quot;, &quot;search&quot;, &quot;add_to_cart&quot;,
+        &quot;checkout_start&quot;, &quot;purchase&quot;, &quot;share&quot;, &quot;review&quot;,
+    ],
+    &quot;allowed_platforms&quot;: [&quot;android&quot;, &quot;ios&quot;, &quot;web&quot;],
+}
+
+SESSION_GAP_MINUTES = 30    # im lặng &gt; 30&#x27; =&gt; bắt đầu session mới
+FUNNEL_STEPS = [&quot;app_open&quot;, &quot;view_product&quot;, &quot;add_to_cart&quot;, &quot;checkout_start&quot;, &quot;purchase&quot;]
+N_CLUSTERS = 3   # chọn theo silhouette (k=3 cao nhất trên dữ liệu demo)
+</pre></details><details><summary><code class="i">generate_data.py</code> — Sinh dữ liệu giả lập</summary><pre>&quot;&quot;&quot;Sinh dữ liệu event giả lập (có chủ đích) để chứng minh thuật toán.
+
+Có 4 &#x27;nguyên mẫu&#x27; hành vi ẩn (người dùng không biết trước, thuật toán phải tự tìm lại):
+  - power_buyer : mở app thường xuyên, mua nhiều
+  - browser     : xem nhiều, hiếm khi mua
+  - casual      : thỉnh thoảng ghé
+  - churned     : dùng đầu kỳ rồi biến mất
+Ngoài ra chèn 1 sự cố: từ ngày DROP_START_DAY, nền tảng Android giảm mạnh hoạt động.
+&quot;&quot;&quot;
+import numpy as np
+import pandas as pd
+import config as C
+
+ARCHETYPES = {
+    #               tỉ lệ,  số ngày active/tuần, P(view|open), P(cart|view), P(checkout|cart), P(buy|checkout)
+    &quot;power_buyer&quot;: (0.15, 5.0, 0.95, 0.55, 0.85, 0.90),
+    &quot;browser&quot;:     (0.30, 4.0, 0.95, 0.15, 0.40, 0.50),
+    &quot;casual&quot;:      (0.35, 1.2, 0.70, 0.20, 0.50, 0.60),
+    &quot;churned&quot;:     (0.20, 3.0, 0.80, 0.25, 0.50, 0.60),
+}
+
+def generate_events(seed: int = C.SEED):
+    &quot;&quot;&quot;Trả về (events_df, true_labels). true_labels chỉ dùng để kiểm chứng phân cụm.&quot;&quot;&quot;
+    rng = np.random.default_rng(seed)
+    start = pd.Timestamp(C.START_DATE)
+    names = list(ARCHETYPES)
+    probs = [ARCHETYPES[n][0] for n in names]
+
+    rows = []
+    labels = {}
+    eid = 0
+    for uid in range(1, C.N_USERS + 1):
+        arche = rng.choice(names, p=probs)
+        labels[uid] = arche
+        _, days_per_week, p_view, p_cart, p_chk, p_buy = ARCHETYPES[arche]
+        platform = rng.choice(C.EVENT_SCHEMA[&quot;allowed_platforms&quot;], p=[0.5, 0.3, 0.2])
+        join_day = int(rng.integers(0, 15))
+        last_active_day = C.N_DAYS if arche != &quot;churned&quot; else int(rng.integers(15, 30))
+
+        for day in range(join_day, last_active_day):
+            p_active = days_per_week / 7
+            # sự cố: Android giảm mạnh cuối kỳ
+            if platform == &quot;android&quot; and day &gt;= C.DROP_START_DAY:
+                p_active *= (1 - C.DROP_RATIO)
+            # hiệu ứng cuối tuần nhẹ (tính mùa vụ theo thứ)
+            if (start + pd.Timedelta(days=day)).dayofweek &gt;= 5:
+                p_active *= 1.25
+            if rng.random() &gt; min(p_active, 1.0):
+                continue
+
+            for _ in range(int(rng.integers(1, 3))):          # 1-2 session/ngày
+                t = start + pd.Timedelta(days=day, hours=int(rng.integers(7, 23)),
+                                         minutes=int(rng.integers(0, 60)))
+                def emit(name):
+                    nonlocal eid, t
+                    eid += 1
+                    t = t + pd.Timedelta(seconds=int(rng.integers(5, 120)))
+                    rows.append((f&quot;e{eid}&quot;, uid, name, t, platform))
+
+                emit(&quot;app_open&quot;)
+                if rng.random() &lt; p_view:
+                    for _ in range(int(rng.integers(1, 6))):
+                        emit(&quot;view_product&quot;)
+                        if rng.random() &lt; 0.2:
+                            emit(&quot;search&quot;)
+                    if rng.random() &lt; p_cart:
+                        emit(&quot;add_to_cart&quot;)
+                        if rng.random() &lt; p_chk:
+                            emit(&quot;checkout_start&quot;)
+                            if rng.random() &lt; p_buy:
+                                emit(&quot;purchase&quot;)
+                                if rng.random() &lt; 0.15:
+                                    emit(&quot;review&quot;)
+                if rng.random() &lt; 0.05:
+                    emit(&quot;share&quot;)
+
+    df = pd.DataFrame(rows, columns=[&quot;event_id&quot;, &quot;user_id&quot;, &quot;event_name&quot;, &quot;timestamp&quot;, &quot;platform&quot;])
+    df = df.sort_values([&quot;user_id&quot;, &quot;timestamp&quot;]).reset_index(drop=True)
+    return df, pd.Series(labels, name=&quot;true_archetype&quot;)
+
+if __name__ == &quot;__main__&quot;:
+    df, labels = generate_events()
+    labels.to_csv(C.OUTPUT_DIR / &quot;true_labels.csv&quot;)
+    df.to_csv(C.OUTPUT_DIR / &quot;events.csv&quot;, index=False)
+    print(f&quot;Đã sinh {len(df):,} event của {df.user_id.nunique():,} user -&gt; output/events.csv&quot;)
+</pre></details><details><summary><code class="i">validation.py</code> — Validation event</summary><pre>&quot;&quot;&quot;Validation event theo schema (đề tài yêu cầu &#x27;validation event&#x27;).&quot;&quot;&quot;
+import pandas as pd
+import config as C
+
+def validate_events(df: pd.DataFrame):
+    &quot;&quot;&quot;Trả về (df_hợp_lệ, df_lỗi). Lỗi kèm lý do để báo cáo chất lượng dữ liệu.&quot;&quot;&quot;
+    S = C.EVENT_SCHEMA
+    missing_cols = [c for c in S[&quot;required&quot;] if c not in df.columns]
+    if missing_cols:
+        raise ValueError(f&quot;Thiếu cột bắt buộc: {missing_cols}&quot;)
+
+    reason = pd.Series(&quot;&quot;, index=df.index)
+    reason[df[S[&quot;required&quot;]].isna().any(axis=1)] += &quot;thiếu_giá_trị;&quot;
+    reason[~df[&quot;event_name&quot;].isin(S[&quot;allowed_events&quot;])] += &quot;event_lạ;&quot;
+    reason[~df[&quot;platform&quot;].isin(S[&quot;allowed_platforms&quot;])] += &quot;platform_lạ;&quot;
+    reason[df.duplicated(&quot;event_id&quot;, keep=&quot;first&quot;)] += &quot;trùng_event_id;&quot;
+    ts = pd.to_datetime(df[&quot;timestamp&quot;], errors=&quot;coerce&quot;)
+    reason[ts.isna()] += &quot;timestamp_sai;&quot;
+    reason[ts &gt; pd.Timestamp.now() + pd.Timedelta(days=1)] += &quot;timestamp_tương_lai;&quot;
+
+    bad = reason != &quot;&quot;
+    good = df[~bad].copy()
+    good[&quot;timestamp&quot;] = pd.to_datetime(good[&quot;timestamp&quot;])
+    errors = df[bad].assign(error=reason[bad])
+    return good, errors
+</pre></details><details><summary><code class="i">segmentation.py</code> — Segmentation</summary><pre>&quot;&quot;&quot;PHẦN 1 - SEGMENTATION: phân nhóm người dùng bằng RFM + hành vi + K-Means.&quot;&quot;&quot;
+import numpy as np
+import pandas as pd
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+from sklearn.preprocessing import StandardScaler
+import config as C
+
+def build_features(events: pd.DataFrame) -&gt; pd.DataFrame:
+    &quot;&quot;&quot;Mỗi user -&gt; 1 dòng đặc trưng (feature engineering).&quot;&quot;&quot;
+    now = events[&quot;timestamp&quot;].max()
+    g = events.groupby(&quot;user_id&quot;)
+    f = pd.DataFrame({
+        &quot;recency_days&quot;: (now - g[&quot;timestamp&quot;].max()).dt.total_seconds() / 86400,   # R
+        &quot;active_days&quot;: g[&quot;timestamp&quot;].apply(lambda s: s.dt.date.nunique()),         # F
+        &quot;total_events&quot;: g.size(),
+    })
+    cnt = events.pivot_table(index=&quot;user_id&quot;, columns=&quot;event_name&quot;, values=&quot;event_id&quot;,
+                             aggfunc=&quot;count&quot;, fill_value=0)
+    for col in [&quot;view_product&quot;, &quot;add_to_cart&quot;, &quot;purchase&quot;]:
+        f[col] = cnt.get(col, 0)
+    f[&quot;purchases&quot;] = f.pop(&quot;purchase&quot;)                                               # M (proxy)
+    f[&quot;view_to_cart_rate&quot;] = f[&quot;add_to_cart&quot;] / f[&quot;view_product&quot;].replace(0, np.nan)
+    f[&quot;view_to_cart_rate&quot;] = f[&quot;view_to_cart_rate&quot;].fillna(0)
+    f[&quot;tenure_days&quot;] = (now - g[&quot;timestamp&quot;].min()).dt.total_seconds() / 86400
+    return f
+
+CLUSTER_FEATURES = [&quot;recency_days&quot;, &quot;active_days&quot;, &quot;view_product&quot;, &quot;purchases&quot;, &quot;view_to_cart_rate&quot;]
+
+def choose_k(X: np.ndarray, k_range=range(2, 8)) -&gt; dict:
+    &quot;&quot;&quot;Chọn k bằng silhouette score (đánh giá chất lượng cụm).&quot;&quot;&quot;
+    km = lambda k: KMeans(k, n_init=10, random_state=C.SEED)
+    return {k: silhouette_score(X, km(k).fit_predict(X)) for k in k_range}
+
+def segment_users(features, k=C.N_CLUSTERS):
+    X = np.log1p(features[CLUSTER_FEATURES])
+    X = StandardScaler().fit_transform(X)
+    km = KMeans(k, n_init=10, random_state=C.SEED).fit(X)
+    out = features.copy()
+    out[&quot;cluster&quot;] = km.labels_
+    return out, choose_k(X)
+
+def name_segments(seg: pd.DataFrame) -&gt; pd.DataFrame:
+    &quot;&quot;&quot;Gán tên dễ hiểu bằng luật trên trung bình từng cụm (giúp AI &amp; người không chuyên đọc được).&quot;&quot;&quot;
+    prof = seg.groupby(&quot;cluster&quot;)[CLUSTER_FEATURES].mean()
+    names = {}
+    for c, r in prof.iterrows():
+        if r.recency_days &gt; 20:
+            names[c] = &quot;Đã rời bỏ / ngủ đông (churned)&quot;
+        elif r.purchases &gt;= prof.purchases.quantile(0.75) and r.active_days &gt;= prof.active_days.median():
+            names[c] = &quot;Khách trung thành mua nhiều (power buyer)&quot;
+        elif r.view_product &gt;= prof.view_product.median() and r.purchases &lt; prof.purchases.median():
+            names[c] = &quot;Người xem nhiều, ít mua (browser)&quot;
+        else:
+            names[c] = &quot;Người dùng thỉnh thoảng (casual)&quot;
+    # k lớn có thể cho 2 cụm trùng tên -&gt; thêm số cụm để không bị gộp nhầm khi thống kê
+    dup = pd.Series(names).value_counts()
+    names = {c: (n if dup[n] == 1 else f&quot;{n} - cụm {c}&quot;) for c, n in names.items()}
+    seg[&quot;segment&quot;] = seg[&quot;cluster&quot;].map(names)
+    return seg
+
+def profile(seg: pd.DataFrame) -&gt; pd.DataFrame:
+    p = seg.groupby(&quot;segment&quot;).agg(
+        users=(&quot;cluster&quot;, &quot;size&quot;),
+        recency_days=(&quot;recency_days&quot;, &quot;mean&quot;),
+        active_days=(&quot;active_days&quot;, &quot;mean&quot;),
+        views=(&quot;view_product&quot;, &quot;mean&quot;),
+        purchases=(&quot;purchases&quot;, &quot;mean&quot;),
+    ).round(2)
+    p[&quot;share_%&quot;] = (p.users / p.users.sum() * 100).round(1)
+    return p.sort_values(&quot;users&quot;, ascending=False)
+</pre></details><details><summary><code class="i">journey.py</code> — Journey analysis</summary><pre>&quot;&quot;&quot;PHẦN 2 - JOURNEY ANALYSIS: session hoá, đường đi phổ biến, ma trận chuyển bước, funnel.&quot;&quot;&quot;
+from collections import Counter
+import pandas as pd
+import config as C
+
+def sessionize(events, gap_minutes=C.SESSION_GAP_MINUTES):
+    &quot;&quot;&quot;Gắn session_id: cùng user, khoảng lặng &gt; gap =&gt; session mới.&quot;&quot;&quot;
+    e = events.sort_values([&quot;user_id&quot;, &quot;timestamp&quot;]).copy()
+    gap = pd.Timedelta(minutes=gap_minutes)
+    new_session = e.groupby(&quot;user_id&quot;)[&quot;timestamp&quot;].diff() &gt; gap
+    e[&quot;session_no&quot;] = new_session.groupby(e[&quot;user_id&quot;]).cumsum()
+    e[&quot;session_id&quot;] = (e[&quot;user_id&quot;].astype(str) + &quot;-&quot;
+                       + e[&quot;session_no&quot;].astype(int).astype(str))
+    return e
+
+def session_paths(e: pd.DataFrame) -&gt; pd.Series:
+    &quot;&quot;&quot;Mỗi session -&gt; chuỗi event (đã nén lặp liên tiếp: view,view,view -&gt; view).&quot;&quot;&quot;
+    def compress(seq):
+        out = []
+        for x in seq:
+            if not out or out[-1] != x:
+                out.append(x)
+        return tuple(out)
+    return e.groupby(&quot;session_id&quot;)[&quot;event_name&quot;].apply(lambda s: compress(s.tolist()))
+
+def top_paths(paths: pd.Series, n: int = 8) -&gt; pd.DataFrame:
+    c = Counter(paths)
+    df = pd.DataFrame(c.most_common(n), columns=[&quot;path&quot;, &quot;sessions&quot;])
+    df[&quot;share_%&quot;] = (df.sessions / len(paths) * 100).round(1)
+    df[&quot;path&quot;] = df[&quot;path&quot;].apply(&quot; → &quot;.join)
+    return df
+
+def transition_matrix(paths: pd.Series) -&gt; pd.DataFrame:
+    &quot;&quot;&quot;Xác suất chuyển từ event A sang event B (chuỗi Markov bậc 1).&quot;&quot;&quot;
+    pairs = Counter()
+    for p in paths:
+        seq = list(p) + [&quot;&lt;END&gt;&quot;]
+        for a, b in zip(seq[:-1], seq[1:]):
+            pairs[(a, b)] += 1
+    m = pd.Series(pairs).unstack(fill_value=0)
+    return m.div(m.sum(axis=1), axis=0).round(3)
+
+def funnel(e, steps=C.FUNNEL_STEPS):
+    &quot;&quot;&quot;Funnel theo session: session đạt bước i chỉ khi đã đạt các bước trước (theo thứ tự).&quot;&quot;&quot;
+    reached = {s: 0 for s in steps}
+    for _, grp in e.groupby(&quot;session_id&quot;)[&quot;event_name&quot;]:
+        seq = grp.tolist()
+        pos = 0
+        for i, step in enumerate(steps):
+            try:
+                pos = seq.index(step, pos) + 1
+                reached[step] += 1
+            except ValueError:
+                break
+    df = pd.DataFrame({&quot;step&quot;: steps, &quot;sessions&quot;: [reached[s] for s in steps]})
+    s = df.sessions
+    df[&quot;conv_from_prev_%&quot;] = (s / s.shift(1) * 100).round(1)
+    df[&quot;conv_from_start_%&quot;] = (s / s.iloc[0] * 100).round(1)
+    df[&quot;drop_off_%&quot;] = (100 - df[&quot;conv_from_prev_%&quot;]).round(1)
+    return df
+
+def funnel_by_segment(e: pd.DataFrame, seg: pd.DataFrame) -&gt; pd.DataFrame:
+    &quot;&quot;&quot;So sánh funnel giữa các segment -&gt; chỗ giao nhau của Segmentation &amp; Journey.&quot;&quot;&quot;
+    rows = {}
+    e = e.merge(seg[[&quot;segment&quot;]], left_on=&quot;user_id&quot;, right_index=True)
+    for name, sub in e.groupby(&quot;segment&quot;):
+        f = funnel(sub)
+        rows[name] = f.set_index(&quot;step&quot;)[&quot;conv_from_start_%&quot;]
+    return pd.DataFrame(rows).T[C.FUNNEL_STEPS[1:]]
+</pre></details><details><summary><code class="i">alerting.py</code> — Cảnh báo</summary><pre>&quot;&quot;&quot;PHẦN 3 - CẢNH BÁO engagement giảm bất thường.
+
+Phương pháp: so sánh giá trị hôm nay với &#x27;baseline cùng thứ trong các tuần trước&#x27;
+(để loại ảnh hưởng mùa vụ theo thứ) và dùng robust z-score (median + MAD) để
+không bị outlier làm nhiễu. Có cooldown để tránh spam cảnh báo.
+&quot;&quot;&quot;
+from dataclasses import dataclass
+import numpy as np
+import pandas as pd
+
+@dataclass
+class Alert:
+    date: pd.Timestamp
+    metric: str
+    scope: str
+    value: float
+    baseline: float
+    drop_pct: float
+    z: float
+    severity: str
+
+def daily_metrics(events: pd.DataFrame, by: str | None = None) -&gt; pd.DataFrame:
+    e = events.assign(date=events[&quot;timestamp&quot;].dt.normalize())
+    keys = [&quot;date&quot;] if by is None else [&quot;date&quot;, by]
+    out = e.groupby(keys).agg(dau=(&quot;user_id&quot;, &quot;nunique&quot;), events=(&quot;event_id&quot;, &quot;count&quot;),
+                              purchases=(&quot;event_name&quot;, lambda s: (s == &quot;purchase&quot;).sum()))
+    return out
+
+def robust_z(x, history):
+    med = np.median(history)
+    # 1.4826: đưa MAD về cùng thang với độ lệch chuẩn
+    mad = np.median(np.abs(history - med)) * 1.4826
+    mad = max(mad, 0.05 * med, 1e-9)   # sàn chống chia cho 0
+    return (x - med) / mad, med
+
+def detect_drops(series: pd.Series, metric: str, scope: str = &quot;all&quot;,
+                 weeks_back: int = 4, z_thresh: float = -3.0, min_drop_pct: float = 20.0,
+                 cooldown_days: int = 3) -&gt; list[Alert]:
+    series = series.asfreq(&quot;D&quot;, fill_value=0)
+    alerts, last_alert = [], None
+    for i in range(7 * weeks_back, len(series)):
+        day, x = series.index[i], series.iloc[i]
+        # baseline = cùng thứ trong các tuần trước
+        hist = np.array([series.iloc[i - 7 * k]
+                         for k in range(1, weeks_back + 1)])
+        z, base = robust_z(x, hist)
+        drop = (base - x) / base * 100 if base &gt; 0 else 0
+        if z &lt;= z_thresh and drop &gt;= min_drop_pct:
+            if last_alert is not None and \
+               (day - last_alert).days &lt;= cooldown_days:
+                continue
+            sev = &quot;CRITICAL&quot; if drop &gt;= 40 or z &lt;= -6 else &quot;WARNING&quot;
+            alerts.append(Alert(day, metric, scope, float(x), float(base),
+                                round(drop, 1), round(float(z), 1), sev))
+            last_alert = day
+    return alerts
+
+def run_alerts(events: pd.DataFrame, **kw) -&gt; list[Alert]:
+    alerts = []
+    overall = daily_metrics(events)
+    for m in [&quot;dau&quot;, &quot;events&quot;]:
+        alerts += detect_drops(overall[m], m, &quot;toàn hệ thống&quot;, **kw)
+    by_p = daily_metrics(events, by=&quot;platform&quot;)
+    for platform, sub in by_p.groupby(level=&quot;platform&quot;):
+        s = sub.droplevel(&quot;platform&quot;)[&quot;dau&quot;]
+        alerts += detect_drops(s, &quot;dau&quot;, f&quot;platform={platform}&quot;, **kw)
+    return sorted(alerts, key=lambda a: (a.date, a.scope))
+</pre></details><details><summary><code class="i">ai_summary.py</code> — AI tóm tắt</summary><pre>&quot;&quot;&quot;AI tóm tắt hành vi người dùng.
+
+Thiết kế 2 lớp:
+ 1) build_context(): gom KẾT QUẢ ĐÃ TÍNH (số liệu thật) thành JSON gọn -&gt; AI chỉ &#x27;diễn giải&#x27;, không tự bịa số.
+ 2) summarize(): gọi LLM nếu có ANTHROPIC_API_KEY; nếu không thì dùng bản tóm tắt theo template (offline).
+&quot;&quot;&quot;
+import json, os
+import pandas as pd
+
+def build_context(seg_profile: pd.DataFrame, funnel_df: pd.DataFrame,
+                  top: pd.DataFrame, alerts: list) -&gt; dict:
+    worst = funnel_df.dropna().sort_values(&quot;drop_off_%&quot;, ascending=False).iloc[0]
+    return {
+        &quot;segments&quot;: seg_profile.reset_index().to_dict(&quot;records&quot;),
+        &quot;funnel&quot;: funnel_df.fillna(0).to_dict(&quot;records&quot;),
+        &quot;biggest_dropoff&quot;: {&quot;to_step&quot;: worst[&quot;step&quot;], &quot;drop_off_pct&quot;: float(worst[&quot;drop_off_%&quot;])},
+        &quot;top_paths&quot;: top.head(5).to_dict(&quot;records&quot;),
+        &quot;alerts&quot;: [{&quot;date&quot;: str(a.date.date()), &quot;metric&quot;: a.metric, &quot;scope&quot;: a.scope,
+                    &quot;drop_pct&quot;: a.drop_pct, &quot;severity&quot;: a.severity} for a in alerts[-5:]],
+    }
+
+PROMPT = &quot;&quot;&quot;Bạn là chuyên gia product analytics. Dựa CHỈ trên JSON số liệu dưới đây, hãy:
+1) Tóm tắt hành vi người dùng (&lt;=5 câu, dễ hiểu cho người không chuyên).
+2) Chỉ ra điểm nghẽn lớn nhất của funnel và nguyên nhân có thể.
+3) Đề xuất 3 giả thuyết cải tiến + 1 brief thử nghiệm A/B (mục tiêu, biến, chỉ số).
+4) Giải thích các cảnh báo gần nhất. Không được bịa số liệu ngoài JSON.
+
+JSON:
+{data}&quot;&quot;&quot;
+
+def template_summary(ctx: dict) -&gt; str:
+    segs = sorted(ctx[&quot;segments&quot;], key=lambda s: -s[&quot;users&quot;])
+    lines = [&quot;[Bản tóm tắt offline - theo template, không gọi LLM]&quot;, &quot;&quot;]
+    lines.append(&quot;Phân nhóm: &quot; + &quot;; &quot;.join(f&#x27;{s[&quot;segment&quot;]} chiếm {s[&quot;share_%&quot;]}%&#x27; for s in segs) + &quot;.&quot;)
+    b = ctx[&quot;biggest_dropoff&quot;]
+    lines.append(f&#x27;Điểm nghẽn lớn nhất của funnel: bước &quot;{b[&quot;to_step&quot;]}&quot; (mất {b[&quot;drop_off_pct&quot;]}% so với bước trước).&#x27;)
+    if ctx[&quot;alerts&quot;]:
+        a = ctx[&quot;alerts&quot;][-1]
+        lines.append(f&#x27;Cảnh báo gần nhất: {a[&quot;severity&quot;]} - {a[&quot;metric&quot;]} ({a[&quot;scope&quot;]}) giảm {a[&quot;drop_pct&quot;]}% vào {a[&quot;date&quot;]}.&#x27;)
+    lines += [&quot;&quot;, &quot;Giả thuyết gợi ý:&quot;,
+              &quot;  H1. Tối ưu nút thêm vào giỏ &amp; thông tin sản phẩm để tăng chuyển đổi view -&gt; cart.&quot;,
+              &quot;  H2. Gửi ưu đãi/nhắc giỏ hàng cho nhóm có tỉ lệ view -&gt; cart thấp (segment lớn nhất).&quot;,
+              &quot;  H3. Điều tra bản phát hành/lỗi ở nền tảng đang có cảnh báo giảm.&quot;,
+              &quot;Brief A/B: đối tượng = segment đông nhất; biến = banner ưu đãi lần đầu; chỉ số chính = view-&gt;cart rate.&quot;]
+    return &quot;\n&quot;.join(lines)
+
+def summarize(ctx):
+    key = os.getenv(&quot;ANTHROPIC_API_KEY&quot;)
+    if not key:
+        return template_summary(ctx)
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=key)
+        data = json.dumps(ctx, ensure_ascii=False)
+        msg = client.messages.create(
+            model=os.getenv(&quot;ANTHROPIC_MODEL&quot;, &quot;claude-sonnet-4-6&quot;),
+            max_tokens=1000,
+            messages=[{&quot;role&quot;: &quot;user&quot;,
+                       &quot;content&quot;: PROMPT.format(data=data)}])
+        return msg.content[0].text
+    except Exception as ex:                       # lỗi mạng/key -&gt; vẫn có kết quả
+        return template_summary(ctx) + f&quot;\n\n(LLM lỗi: {ex})&quot;
+</pre></details><details><summary><code class="i">pipeline.py</code> — Pipeline dùng chung</summary><pre>&quot;&quot;&quot;Pipeline dùng chung cho main.py, app.py (Streamlit) và build_site.py (web tĩnh).&quot;&quot;&quot;
+import pandas as pd
+import config as C
+from generate_data import generate_events
+from validation import validate_events
+import segmentation as S
+import journey as J
+import alerting as A
+import ai_summary as AI
+
+def run_pipeline(n_users: int = C.N_USERS, k: int = C.N_CLUSTERS,
+                 session_gap: int = C.SESSION_GAP_MINUTES,
+                 z_thresh: float = -3.0, weeks_back: int = 4,
+                 min_drop_pct: float = 20.0, cooldown_days: int = 3,
+                 events: pd.DataFrame | None = None, seed: int = C.SEED,
+                 inject_dirty: bool = False) -&gt; dict:
+    &quot;&quot;&quot;events=None -&gt; sinh dữ liệu giả lập; hoặc truyền DataFrame event của bạn
+    (cột: event_id, user_id, event_name, timestamp, platform).&quot;&quot;&quot;
+    true = None
+    if events is None:
+        C.N_USERS = n_users
+        events, true = generate_events(seed)
+        if inject_dirty:     # chèn vài event bẩn để chứng minh validation
+            events = pd.concat([events, pd.DataFrame([
+                {&quot;event_id&quot;: &quot;bad1&quot;, &quot;user_id&quot;: 1, &quot;event_name&quot;: &quot;hack_event&quot;, &quot;timestamp&quot;: &quot;2026-08-02&quot;, &quot;platform&quot;: &quot;web&quot;},
+                {&quot;event_id&quot;: &quot;bad2&quot;, &quot;user_id&quot;: 2, &quot;event_name&quot;: &quot;purchase&quot;, &quot;timestamp&quot;: &quot;not-a-date&quot;, &quot;platform&quot;: &quot;web&quot;},
+                {&quot;event_id&quot;: events.event_id.iloc[0], &quot;user_id&quot;: 3, &quot;event_name&quot;: &quot;purchase&quot;, &quot;timestamp&quot;: &quot;2026-08-02&quot;, &quot;platform&quot;: &quot;ios&quot;},
+            ])], ignore_index=True)
+    events, errors = validate_events(events)
+
+    feats = S.build_features(events)
+    seg, sil = S.segment_users(feats, k=k)
+    seg = S.name_segments(seg)
+    prof = S.profile(seg)
+    check = pd.crosstab(seg.segment, true.reindex(seg.index)) if true is not None else None
+
+    e = J.sessionize(events, gap_minutes=session_gap)
+    paths = J.session_paths(e)
+    top = J.top_paths(paths, n=10)
+    fun = J.funnel(e)
+    fun_seg = J.funnel_by_segment(e, seg)
+    trans = J.transition_matrix(paths)
+
+    alerts = A.run_alerts(events, z_thresh=z_thresh, weeks_back=weeks_back,
+                          min_drop_pct=min_drop_pct, cooldown_days=cooldown_days)
+    overall = A.daily_metrics(events)
+    by_platform = A.daily_metrics(events, by=&quot;platform&quot;)[&quot;dau&quot;].unstack()
+
+    ctx = AI.build_context(prof, fun, top, alerts)
+    summary = AI.summarize(ctx)
+    return dict(events=events, errors=errors, seg=seg, sil=sil, prof=prof, check=check,
+                sessions=e, paths=paths, top=top, funnel=fun, funnel_seg=fun_seg,
+                trans=trans, alerts=alerts, overall=overall, by_platform=by_platform,
+                ctx=ctx, summary=summary)
+</pre></details><details><summary><code class="i">app.py</code> — App Streamlit</summary><pre>&quot;&quot;&quot;Streamlit app: chạy trực quan Segmentation, Journey, Alerting.
+
+Chạy:  streamlit run app.py
+&quot;&quot;&quot;
+import pandas as pd
+import streamlit as st
+import config as C
+from pipeline import run_pipeline
+import viz
+
+st.set_page_config(page_title=&quot;Product Analytics + AI&quot;, page_icon=&quot;📈&quot;, layout=&quot;wide&quot;)
+st.title(&quot;📈 Product Analytics + AI tóm tắt hành vi người dùng&quot;)
+st.caption(&quot;Segmentation · Journey analysis · Cảnh báo engagement giảm bất thường&quot;)
+
+# ---------- Sidebar: tham số ----------
+with st.sidebar:
+    st.header(&quot;Nguồn dữ liệu&quot;)
+    up = st.file_uploader(&quot;Tải CSV event của bạn (tuỳ chọn)&quot;, type=&quot;csv&quot;,
+                          help=&quot;Cột bắt buộc: &quot; + &quot;, &quot;.join(C.EVENT_SCHEMA[&quot;required&quot;]))
+    st.download_button(&quot;Tải file CSV mẫu&quot;, data=b&quot;event_id,user_id,event_name,timestamp,platform\n&quot;
+                       b&quot;e1,1,app_open,2026-08-01 10:00:00,android\n&quot;,
+                       file_name=&quot;events_mau.csv&quot;, mime=&quot;text/csv&quot;)
+    st.header(&quot;Tham số&quot;)
+    n_users = st.slider(&quot;Số user giả lập&quot;, 300, 3000, C.N_USERS, 100, disabled=up is not None)
+    dirty = st.checkbox(&quot;Chèn vài event lỗi để thử validation&quot;, value=True, disabled=up is not None)
+    k = st.slider(&quot;Số segment (k)&quot;, 2, 6, C.N_CLUSTERS)
+    gap = st.slider(&quot;Khoảng lặng kết thúc session (phút)&quot;, 5, 120, C.SESSION_GAP_MINUTES, 5)
+    st.subheader(&quot;Cảnh báo&quot;)
+    z_thresh = st.slider(&quot;Ngưỡng robust z-score&quot;, -8.0, -1.5, -3.0, 0.5,
+                         help=&quot;Càng âm càng khó báo (ít báo thừa).&quot;)
+    weeks_back = st.slider(&quot;Số tuần dùng làm baseline&quot;, 2, 8, 4)
+    min_drop = st.slider(&quot;Mức giảm tối thiểu (%)&quot;, 5, 60, 20, 5)
+    cooldown = st.slider(&quot;Cooldown giữa 2 cảnh báo (ngày)&quot;, 0, 7, 3)
+
+@st.cache_data(show_spinner=&quot;Đang chạy pipeline...&quot;)
+def compute(n_users, k, gap, z_thresh, weeks_back, min_drop, cooldown, csv_bytes, dirty):
+    ev = None
+    if csv_bytes is not None:
+        import io
+        ev = pd.read_csv(io.BytesIO(csv_bytes))
+    return run_pipeline(n_users=n_users, k=k, session_gap=gap, z_thresh=z_thresh,
+                        weeks_back=weeks_back, min_drop_pct=min_drop,
+                        cooldown_days=cooldown, events=ev, inject_dirty=dirty)
+
+try:
+    R = compute(n_users, k, gap, z_thresh, weeks_back, min_drop, cooldown,
+                up.getvalue() if up else None, dirty)
+except Exception as ex:
+    st.error(f&quot;Không chạy được pipeline: {ex}&quot;)
+    st.stop()
+
+# ---------- KPI ----------
+ev = R[&quot;events&quot;]
+c1, c2, c3, c4 = st.columns(4)
+c1.metric(&quot;Event hợp lệ&quot;, f&quot;{len(ev):,}&quot;)
+c2.metric(&quot;Số user&quot;, f&quot;{ev.user_id.nunique():,}&quot;)
+c3.metric(&quot;Số session&quot;, f&quot;{len(R[&#x27;paths&#x27;]):,}&quot;)
+c4.metric(&quot;Số cảnh báo&quot;, len(R[&quot;alerts&quot;]))
+if len(R[&quot;errors&quot;]):
+    st.warning(f&quot;{len(R[&#x27;errors&#x27;])} event bị loại do sai schema.&quot;)
+    with st.expander(&quot;Xem event lỗi&quot;):
+        st.dataframe(R[&quot;errors&quot;].head(200))
+
+t1, t2, t3, t4, t5 = st.tabs([&quot;👥 Segmentation&quot;, &quot;🧭 Journey&quot;, &quot;🚨 Cảnh báo&quot;, &quot;🤖 AI tóm tắt&quot;, &quot;📐 Sơ đồ&quot;])
+
+with t1:
+    a, b = st.columns([3, 2])
+    a.plotly_chart(viz.fig_segments_pca(R[&quot;seg&quot;]), width=&quot;stretch&quot;)
+    b.plotly_chart(viz.fig_silhouette(R[&quot;sil&quot;], k), width=&quot;stretch&quot;)
+    st.plotly_chart(viz.fig_segment_share(R[&quot;prof&quot;]), width=&quot;stretch&quot;)
+    st.subheader(&quot;Profile từng segment&quot;)
+    st.dataframe(R[&quot;prof&quot;], width=&quot;stretch&quot;)
+    if R[&quot;check&quot;] is not None:
+        with st.expander(&quot;Đối chiếu với nhóm ẩn thật (chỉ có ở dữ liệu giả lập)&quot;):
+            st.dataframe(R[&quot;check&quot;])
+
+with t2:
+    a, b = st.columns(2)
+    a.plotly_chart(viz.fig_funnel(R[&quot;funnel&quot;]), width=&quot;stretch&quot;)
+    b.plotly_chart(viz.fig_funnel_by_segment(R[&quot;funnel_seg&quot;]), width=&quot;stretch&quot;)
+    st.plotly_chart(viz.fig_sankey(R[&quot;paths&quot;]), width=&quot;stretch&quot;)
+    st.plotly_chart(viz.fig_transition(R[&quot;trans&quot;]), width=&quot;stretch&quot;)
+    st.subheader(&quot;Top đường đi phổ biến&quot;)
+    st.dataframe(R[&quot;top&quot;], width=&quot;stretch&quot;)
+
+with t3:
+    st.plotly_chart(viz.fig_dau(R[&quot;by_platform&quot;], R[&quot;alerts&quot;]), width=&quot;stretch&quot;)
+    st.plotly_chart(viz.fig_alert_baseline(R[&quot;overall&quot;][&quot;dau&quot;], weeks_back), width=&quot;stretch&quot;)
+    if R[&quot;alerts&quot;]:
+        st.dataframe(pd.DataFrame([{
+            &quot;Ngày&quot;: a.date.date(), &quot;Mức&quot;: a.severity, &quot;Metric&quot;: a.metric, &quot;Phạm vi&quot;: a.scope,
+            &quot;Giá trị&quot;: a.value, &quot;Baseline&quot;: a.baseline, &quot;Giảm %&quot;: a.drop_pct, &quot;z&quot;: a.z}
+            for a in R[&quot;alerts&quot;]]), width=&quot;stretch&quot;)
+    else:
+        st.info(&quot;Không có cảnh báo với tham số hiện tại - thử hạ ngưỡng z hoặc mức giảm tối thiểu.&quot;)
+
+with t4:
+    st.text(R[&quot;summary&quot;])
+    st.caption(&quot;Chưa đặt ANTHROPIC_API_KEY nên đang dùng bản tóm tắt template offline. &quot;
+               &quot;Đặt biến môi trường ANTHROPIC_API_KEY để gọi Claude thật.&quot;)
+    with st.expander(&quot;JSON số liệu gửi cho AI (AI chỉ diễn giải, không tự tính)&quot;):
+        st.json(R[&quot;ctx&quot;])
+
+with t5:
+    for name, cap in [(&quot;flow&quot;, &quot;Luồng hoạt động&quot;), (&quot;architecture&quot;, &quot;Kiến trúc&quot;), (&quot;erd&quot;, &quot;ERD&quot;)]:
+        p = C.BASE_DIR / &quot;docs&quot; / &quot;assets&quot; / f&quot;{name}.png&quot;
+        if p.exists():
+            st.subheader(cap); st.image(str(p))
+</pre></details><details><summary><code class="i">diagrams.py</code> — Vẽ sơ đồ</summary><pre>&quot;&quot;&quot;Vẽ sơ đồ kiến trúc, luồng hoạt động và ERD bằng Graphviz -&gt; docs/assets/*.png
+
+Chạy:  pip install graphviz   (và cài Graphviz: https://graphviz.org/download/)
+       python diagrams.py
+&quot;&quot;&quot;
+import graphviz
+import config as C
+
+FONT = &quot;Liberation Sans&quot;      # đổi thành &quot;Arial&quot; nếu chạy trên Windows
+INK, TEAL, AMBER, MIST, RED = &quot;#12303B&quot;, &quot;#0E7C86&quot;, &quot;#F2A541&quot;, &quot;#E6F2F3&quot;, &quot;#C8553D&quot;
+
+def _g(name, rankdir=&quot;TB&quot;, **kw):
+    g = graphviz.Digraph(name, format=&quot;png&quot;)
+    g.attr(rankdir=rankdir, dpi=&quot;200&quot;, bgcolor=&quot;white&quot;, fontname=FONT, pad=&quot;0.3&quot;, **kw)
+    g.attr(&quot;node&quot;, fontname=FONT, fontsize=&quot;13&quot;, color=INK, penwidth=&quot;1.4&quot;)
+    g.attr(&quot;edge&quot;, fontname=FONT, fontsize=&quot;11&quot;, color=INK, penwidth=&quot;1.3&quot;)
+    return g
+
+def activity_diagram():
+    g = _g(&quot;activity&quot;, nodesep=&quot;0.35&quot;, ranksep=&quot;0.38&quot;)
+    g.node(&quot;start&quot;, &quot;&quot;, shape=&quot;circle&quot;, style=&quot;filled&quot;, fillcolor=INK, width=&quot;0.25&quot;)
+    g.node(&quot;end&quot;, &quot;&quot;, shape=&quot;doublecircle&quot;, style=&quot;filled&quot;, fillcolor=INK, width=&quot;0.22&quot;)
+    act = dict(shape=&quot;box&quot;, style=&quot;rounded,filled&quot;, fillcolor=MIST)
+    g.node(&quot;ev&quot;, &quot;App / SDK gửi event&quot;, **act)
+    g.node(&quot;val&quot;, &quot;validation.py\nKiểm tra schema, trùng, timestamp&quot;, **act)
+    g.node(&quot;ok&quot;, &quot;Event hợp lệ?&quot;, shape=&quot;diamond&quot;, style=&quot;filled&quot;, fillcolor=AMBER)
+    g.node(&quot;bad&quot;, &quot;Ghi vào bảng event lỗi\n(báo cáo chất lượng dữ liệu)&quot;, shape=&quot;box&quot;, style=&quot;rounded,filled&quot;, fillcolor=&quot;#F6D5CC&quot;)
+    g.node(&quot;store&quot;, &quot;Event store&quot;, shape=&quot;cylinder&quot;, style=&quot;filled&quot;, fillcolor=&quot;white&quot;)
+    g.node(&quot;fork&quot;, &quot;&quot;, shape=&quot;box&quot;, style=&quot;filled&quot;, fillcolor=INK, height=&quot;0.06&quot;, width=&quot;5.4&quot;)
+    g.node(&quot;seg&quot;, &quot;segmentation.py\nFeature → chuẩn hoá → KMeans\n→ đặt tên segment&quot;, **act)
+    g.node(&quot;jou&quot;, &quot;journey.py\nSession hoá → path → funnel\n→ ma trận chuyển bước&quot;, **act)
+    g.node(&quot;ale&quot;, &quot;alerting.py\nMetric theo ngày → baseline cùng thứ\n→ robust z-score&quot;, **act)
+    g.node(&quot;join&quot;, &quot;&quot;, shape=&quot;box&quot;, style=&quot;filled&quot;, fillcolor=INK, height=&quot;0.06&quot;, width=&quot;5.4&quot;)
+    g.node(&quot;ctx&quot;, &quot;ai_summary.py · build_context()\nGom số liệu thật thành JSON&quot;, **act)
+    g.node(&quot;sev&quot;, &quot;Có cảnh báo?&quot;, shape=&quot;diamond&quot;, style=&quot;filled&quot;, fillcolor=AMBER)
+    g.node(&quot;push&quot;, &quot;Gửi cảnh báo\n(Slack / Email)&quot;, shape=&quot;box&quot;, style=&quot;rounded,filled&quot;, fillcolor=&quot;#F6D5CC&quot;)
+    g.node(&quot;llm&quot;, &quot;LLM tóm tắt, nêu giả thuyết, brief A/B\n(không có API key → template offline)&quot;, **act)
+    g.node(&quot;dash&quot;, &quot;Dashboard theo vai trò\nProduct / Marketing / Admin&quot;, **act)
+
+    g.edge(&quot;start&quot;, &quot;ev&quot;); g.edge(&quot;ev&quot;, &quot;val&quot;); g.edge(&quot;val&quot;, &quot;ok&quot;)
+    g.edge(&quot;ok&quot;, &quot;bad&quot;, label=&quot; Không&quot;); g.edge(&quot;bad&quot;, &quot;end&quot;, style=&quot;dashed&quot;, constraint=&quot;false&quot;)
+    g.edge(&quot;ok&quot;, &quot;store&quot;, label=&quot; Có&quot;); g.edge(&quot;store&quot;, &quot;fork&quot;)
+    for n in (&quot;seg&quot;, &quot;jou&quot;, &quot;ale&quot;):
+        g.edge(&quot;fork&quot;, n); g.edge(n, &quot;join&quot;)
+    g.edge(&quot;join&quot;, &quot;ctx&quot;); g.edge(&quot;ctx&quot;, &quot;sev&quot;)
+    g.edge(&quot;sev&quot;, &quot;push&quot;, label=&quot; Có&quot;); g.edge(&quot;sev&quot;, &quot;llm&quot;, label=&quot; Không&quot;)
+    g.edge(&quot;push&quot;, &quot;llm&quot;); g.edge(&quot;llm&quot;, &quot;dash&quot;); g.edge(&quot;dash&quot;, &quot;end&quot;)
+    g.render(str(C.ASSETS_DIR / &quot;flow&quot;), cleanup=True)
+
+def architecture_diagram():
+    g = _g(&quot;arch&quot;, rankdir=&quot;LR&quot;, nodesep=&quot;0.3&quot;, ranksep=&quot;0.55&quot;)
+    box = dict(shape=&quot;box&quot;, style=&quot;rounded,filled&quot;, fillcolor=MIST)
+    with g.subgraph(name=&quot;cluster_in&quot;) as c:
+        c.attr(label=&quot;Thu thập&quot;, style=&quot;rounded&quot;, color=TEAL, fontname=FONT, fontcolor=TEAL)
+        c.node(&quot;sdk&quot;, &quot;SDK / Event schema&quot;, **box); c.node(&quot;val&quot;, &quot;Validation&quot;, **box)
+    with g.subgraph(name=&quot;cluster_store&quot;) as c:
+        c.attr(label=&quot;Lưu trữ&quot;, style=&quot;rounded&quot;, color=TEAL, fontname=FONT, fontcolor=TEAL)
+        c.node(&quot;db&quot;, &quot;Event store\n(CSV → PostgreSQL)&quot;, shape=&quot;cylinder&quot;, style=&quot;filled&quot;, fillcolor=&quot;white&quot;)
+    with g.subgraph(name=&quot;cluster_an&quot;) as c:
+        c.attr(label=&quot;Phân tích (phần được giao)&quot;, style=&quot;rounded,filled&quot;, fillcolor=&quot;#FFF3DE&quot;, color=AMBER, fontname=FONT, fontcolor=INK)
+        c.node(&quot;seg&quot;, &quot;Segmentation\nKMeans + RFM&quot;, **box)
+        c.node(&quot;jou&quot;, &quot;Journey\nSession · Funnel · Markov&quot;, **box)
+        c.node(&quot;ale&quot;, &quot;Alerting\nRobust z-score&quot;, **box)
+    with g.subgraph(name=&quot;cluster_ai&quot;) as c:
+        c.attr(label=&quot;AI&quot;, style=&quot;rounded&quot;, color=TEAL, fontname=FONT, fontcolor=TEAL)
+        c.node(&quot;ctx&quot;, &quot;Context JSON&quot;, **box); c.node(&quot;llm&quot;, &quot;Claude API\n/ template&quot;, **box)
+    with g.subgraph(name=&quot;cluster_out&quot;) as c:
+        c.attr(label=&quot;Đầu ra&quot;, style=&quot;rounded&quot;, color=TEAL, fontname=FONT, fontcolor=TEAL)
+        c.node(&quot;dash&quot;, &quot;Dashboard\ntheo vai trò&quot;, **box); c.node(&quot;notif&quot;, &quot;Cảnh báo\nSlack / Email&quot;, **box)
+    g.edge(&quot;sdk&quot;, &quot;val&quot;); g.edge(&quot;val&quot;, &quot;db&quot;)
+    for n in (&quot;seg&quot;, &quot;jou&quot;, &quot;ale&quot;):
+        g.edge(&quot;db&quot;, n); g.edge(n, &quot;ctx&quot;)
+    g.edge(&quot;ctx&quot;, &quot;llm&quot;); g.edge(&quot;llm&quot;, &quot;dash&quot;); g.edge(&quot;ale&quot;, &quot;notif&quot;, style=&quot;dashed&quot;)
+    g.edge(&quot;seg&quot;, &quot;jou&quot;, label=&quot; funnel theo segment&quot;, style=&quot;dotted&quot;, constraint=&quot;false&quot;)
+    g.render(str(C.ASSETS_DIR / &quot;architecture&quot;), cleanup=True)
+
+def erd():
+    g = _g(&quot;erd&quot;, rankdir=&quot;LR&quot;, nodesep=&quot;0.45&quot;, ranksep=&quot;0.9&quot;)
+    g.attr(&quot;node&quot;, shape=&quot;plaintext&quot;)
+    def table(name, pk, cols, head=TEAL):
+        rows = &quot;&quot;.join(f&#x27;&lt;TR&gt;&lt;TD ALIGN=&quot;LEFT&quot; PORT=&quot;{c.split()[0]}&quot;&gt;{c}&lt;/TD&gt;&lt;/TR&gt;&#x27; for c in cols)
+        return (f&#x27;&lt;&lt;TABLE BORDER=&quot;1&quot; CELLBORDER=&quot;0&quot; CELLSPACING=&quot;0&quot; CELLPADDING=&quot;5&quot; BGCOLOR=&quot;white&quot;&gt;&#x27;
+                f&#x27;&lt;TR&gt;&lt;TD BGCOLOR=&quot;{head}&quot;&gt;&lt;FONT COLOR=&quot;white&quot;&gt;&lt;B&gt;{name}&lt;/B&gt;&lt;/FONT&gt;&lt;/TD&gt;&lt;/TR&gt;&#x27;
+                f&#x27;&lt;TR&gt;&lt;TD ALIGN=&quot;LEFT&quot;&gt;&lt;B&gt;{pk}&lt;/B&gt;&lt;/TD&gt;&lt;/TR&gt;{rows}&lt;/TABLE&gt;&gt;&#x27;)
+    g.node(&quot;USER&quot;, table(&quot;USER&quot;, &quot;PK user_id&quot;, [&quot;platform&quot;, &quot;first_seen&quot;]))
+    g.node(&quot;SESSION&quot;, table(&quot;SESSION&quot;, &quot;PK session_id&quot;, [&quot;FK user_id&quot;, &quot;started_at&quot;, &quot;ended_at&quot;]))
+    g.node(&quot;EVENT&quot;, table(&quot;EVENT&quot;, &quot;PK event_id&quot;, [&quot;FK user_id&quot;, &quot;FK session_id&quot;, &quot;event_name&quot;, &quot;timestamp&quot;, &quot;platform&quot;]))
+    g.node(&quot;SEGMENT&quot;, table(&quot;SEGMENT&quot;, &quot;PK segment_id&quot;, [&quot;name&quot;, &quot;model_version&quot;], head=AMBER))
+    g.node(&quot;SNAP&quot;, table(&quot;SEGMENT_SNAPSHOT&quot;, &quot;PK snapshot_id&quot;, [&quot;FK user_id&quot;, &quot;FK segment_id&quot;, &quot;snapshot_date&quot;], head=AMBER))
+    g.node(&quot;METRIC&quot;, table(&quot;METRIC_DAILY&quot;, &quot;PK date + scope&quot;, [&quot;dau&quot;, &quot;events&quot;, &quot;purchases&quot;], head=RED))
+    g.node(&quot;ALERT&quot;, table(&quot;ALERT&quot;, &quot;PK alert_id&quot;, [&quot;FK metric (date, scope)&quot;, &quot;drop_pct&quot;, &quot;z_score&quot;, &quot;severity&quot;], head=RED))
+    g.node(&quot;REPORT&quot;, table(&quot;INSIGHT_REPORT&quot;, &quot;PK report_id&quot;, [&quot;ai_summary&quot;, &quot;created_at&quot;], head=INK))
+    g.edge(&quot;USER&quot;, &quot;SESSION&quot;, label=&quot; 1 — N&quot;); g.edge(&quot;SESSION&quot;, &quot;EVENT&quot;, label=&quot; 1 — N&quot;)
+    g.edge(&quot;USER&quot;, &quot;EVENT&quot;, label=&quot; 1 — N&quot;, style=&quot;dashed&quot;)
+    g.edge(&quot;USER&quot;, &quot;SNAP&quot;, label=&quot; 1 — N&quot;); g.edge(&quot;SEGMENT&quot;, &quot;SNAP&quot;, label=&quot; 1 — N&quot;)
+    g.edge(&quot;METRIC&quot;, &quot;ALERT&quot;, label=&quot; 1 — N&quot;); g.edge(&quot;ALERT&quot;, &quot;REPORT&quot;, label=&quot; N — N&quot;, style=&quot;dashed&quot;)
+    g.edge(&quot;SEGMENT&quot;, &quot;REPORT&quot;, label=&quot; N — N&quot;, style=&quot;dashed&quot;)
+    g.render(str(C.ASSETS_DIR / &quot;erd&quot;), cleanup=True)
+
+if __name__ == &quot;__main__&quot;:
+    activity_diagram(); architecture_diagram(); erd()
+    print(&quot;Đã vẽ: docs/assets/flow.png, architecture.png, erd.png&quot;)
+</pre></details>
+</div></section>
+
+<section id="chay-thu"><div class="wrap">
+<h2>Chạy thử trên máy bạn</h2>
+<div class="grid g3">
+<div class="card"><h4>1 · Cài đặt</h4><pre>git clone &lt;URL repo&gt;
+cd product-analytics-ai
+pip install -r requirements.txt</pre></div>
+<div class="card"><h4>2 · Chạy trực quan</h4><pre>streamlit run app.py</pre><p style="margin-top:10px">Chỉnh tham số, hoặc tải CSV event của bạn lên.</p></div>
+<div class="card"><h4>3 · Chạy dòng lệnh</h4><pre>python main.py</pre><p style="margin-top:10px">In kết quả và lưu <code class="i">output/dashboard.png</code>.</p></div>
+</div></div></section>
+
+<section id="han-che"><div class="wrap">
+<h2>Hạn chế cần nói thẳng</h2>
+<div class="note"><ul style="margin:0;padding-left:20px">
+<li>Dữ liệu là giả lập có chủ đích nên các nhóm dễ tách; trên dữ liệu thật kết quả sẽ nhiễu hơn. Trang này chứng minh cơ chế chạy được, không chứng minh độ chính xác ngoài thực tế.</li>
+<li>Silhouette cao nhất ở k=3; với k=4 nhóm “xem nhiều, ít mua” bị gộp vào nhóm “thỉnh thoảng”. Tên segment đặt bằng luật cứng nên chưa ổn định.</li>
+<li>Cooldown 3 ngày và ngưỡng z khiến số cảnh báo ít hơn số ngày thực sự giảm; cần tinh chỉnh bằng precision/recall trên sự cố đã biết.</li>
+<li>Baseline cùng thứ chưa xử lý ngày lễ, đợt khuyến mãi.</li></ul></div>
+</div></section>
+<footer><div class="wrap">Dựng từ <code class="i">build_site.py</code> · đồ án môn Lập trình Python · MIT License</div></footer>
+<script>
+// Vẽ lại biểu đồ theo đúng độ rộng ô lưới sau khi trang đã bố cục xong
+function fitPlots(){document.querySelectorAll('.js-plotly-plot').forEach(function(d){Plotly.Plots.resize(d)})}
+window.addEventListener('load',function(){fitPlots();setTimeout(fitPlots,400)});
+</script>
+</body></html>
